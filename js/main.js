@@ -649,6 +649,323 @@
         });
     }
 
+    // ========== 好友侧边栏 ==========
+    var friendsOnlineMap = {};
+    var onlinePollTimer = null;
+    var heartbeatTimer = null;
+    var chatPollTimer = null;
+    var chatFriendId = null;
+
+    function initFriendsSidebar() {
+        var toggle = document.getElementById("friendsToggle");
+        var body = document.getElementById("friendsBody");
+        if (!toggle || !body) return;
+
+        toggle.addEventListener("click", function () {
+            var collapsed = body.classList.toggle("hidden");
+            toggle.querySelector(".toggle-arrow").textContent = collapsed ? "▶" : "▼";
+            if (!collapsed) renderFriendsSidebar();
+        });
+    }
+
+    function renderFriendsSidebar() {
+        var container = document.getElementById("sidebarFriendsList");
+        var countEl = document.getElementById("friendsOnlineCount");
+        if (!container || !ZXF.api || !ZXF.userId) return;
+
+        ZXF.api.getFriendsList(ZXF.userId).then(function (data) {
+            if (!data || !data.friends) return;
+            ZXF.friends = data.friends;
+
+            var onlineCount = 0;
+            if (data.friends.length === 0) {
+                container.innerHTML = "<p class=\"friends-empty\">暂无好友</p>";
+                if (countEl) countEl.textContent = "0";
+                return;
+            }
+
+            var html = "";
+            for (var i = 0; i < data.friends.length; i++) {
+                var f = data.friends[i];
+                var isOnline = friendsOnlineMap[f.userId] === true;
+                if (isOnline) onlineCount++;
+                html += "<div class=\"sidebar-friend-row\" data-friend-id=\"" + f.userId + "\">" +
+                        "<span class=\"sidebar-online-dot " + (isOnline ? "online" : "offline") + "\"></span>" +
+                        "<span class=\"sidebar-friend-name\">" + escapeHtml(f.nickname) + "</span>" +
+                        "<span class=\"sidebar-friend-best\">" + String(f.bestScore || 0) + "</span>" +
+                        "<button class=\"sidebar-chat-btn\" data-friend-id=\"" + f.userId + "\" title=\"聊天\">💬</button>" +
+                        "<button class=\"sidebar-pk-btn\" data-friend-id=\"" + f.userId + "\" title=\"PK\">⚔</button>" +
+                        "</div>";
+            }
+            container.innerHTML = html;
+
+            if (countEl) countEl.textContent = String(onlineCount);
+
+            // 绑定聊天按钮
+            var chatBtns = container.querySelectorAll(".sidebar-chat-btn");
+            for (var c = 0; c < chatBtns.length; c++) {
+                chatBtns[c].addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    openChat(this.getAttribute("data-friend-id"));
+                });
+            }
+
+            // 绑定 PK 按钮
+            var pkBtns = container.querySelectorAll(".sidebar-pk-btn");
+            for (var p = 0; p < pkBtns.length; p++) {
+                pkBtns[p].addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    // 点击 PK 按钮也打开聊天并发送 PK 邀请
+                    var fid = this.getAttribute("data-friend-id");
+                    openChat(fid);
+                    setTimeout(function () { sendPKRequest(fid); }, 400);
+                });
+            }
+
+            // 点击行本身打开聊天
+            var rows = container.querySelectorAll(".sidebar-friend-row");
+            for (var r = 0; r < rows.length; r++) {
+                rows[r].addEventListener("click", function () {
+                    openChat(this.getAttribute("data-friend-id"));
+                });
+            }
+        }).catch(function () {});
+    }
+
+    // ========== 在线状态轮询 ==========
+    function startOnlinePolling() {
+        if (onlinePollTimer) return;
+        // 立即发一次心跳
+        doHeartbeat();
+        heartbeatTimer = setInterval(doHeartbeat, 15000);
+        // 每 10 秒查询好友在线状态
+        onlinePollTimer = setInterval(fetchOnlineStatus, 10000);
+    }
+
+    function doHeartbeat() {
+        if (!ZXF.api || !ZXF.userId) return;
+        ZXF.api.heartbeat(ZXF.userId).catch(function () {});
+        // 如果聊天打开，也在此刷新
+        if (chatFriendId) refreshChatMessages();
+    }
+
+    function fetchOnlineStatus() {
+        if (!ZXF.api || !ZXF.userId || ZXF.friends.length === 0) return;
+        var ids = ZXF.friends.map(function (f) { return f.userId; });
+        ZXF.api.getOnlineStatus(ids).then(function (data) {
+            if (data && data.online) {
+                friendsOnlineMap = data.online;
+                // 更新侧边栏在线状态圆点
+                updateOnlineDots();
+                // 更新聊天在线徽章
+                updateChatOnlineBadge();
+            }
+        }).catch(function () {});
+    }
+
+    function updateOnlineDots() {
+        var dots = document.querySelectorAll(".sidebar-online-dot");
+        for (var i = 0; i < dots.length; i++) {
+            var row = dots[i].closest(".sidebar-friend-row");
+            if (!row) continue;
+            var fid = row.getAttribute("data-friend-id");
+            var online = friendsOnlineMap[fid] === true;
+            dots[i].className = "sidebar-online-dot " + (online ? "online" : "offline");
+        }
+    }
+
+    // ========== 聊天系统 ==========
+    function initChatModal() {
+        var modal = document.getElementById("chatModal");
+        var closeBtn = document.getElementById("chatClose");
+        var backdrop = modal ? modal.querySelector(".chat-backdrop") : null;
+        var sendBtn = document.getElementById("chatSendBtn");
+        var pkBtn = document.getElementById("chatPKBtn");
+        var input = document.getElementById("chatInput");
+
+        if (!modal) return;
+
+        function closeChat() {
+            modal.classList.add("hidden");
+            if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+            chatFriendId = null;
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener("click", function (e) { e.stopPropagation(); closeChat(); });
+        }
+        if (backdrop) {
+            backdrop.addEventListener("click", function (e) { e.stopPropagation(); closeChat(); });
+        }
+
+        modal.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+
+        // 发送文字消息
+        if (sendBtn && input) {
+            sendBtn.addEventListener("click", function () { sendTextMessage(); });
+            input.addEventListener("keydown", function (e) {
+                if (e.key === "Enter") sendTextMessage();
+            });
+        }
+
+        // PK 邀请按钮
+        if (pkBtn) {
+            pkBtn.addEventListener("click", function () {
+                if (chatFriendId) sendPKRequest(chatFriendId);
+            });
+        }
+    }
+
+    function openChat(friendId) {
+        if (!ZXF.api || !ZXF.userId) return;
+        chatFriendId = friendId;
+        var modal = document.getElementById("chatModal");
+        if (!modal) return;
+        modal.classList.remove("hidden");
+
+        // 设置好友名
+        var nameEl = document.getElementById("chatFriendName");
+        var friend = ZXF.friends.find(function (f) { return f.userId === friendId; });
+        if (nameEl && friend) nameEl.textContent = friend.nickname;
+        updateChatOnlineBadge();
+
+        // 清空并加载消息
+        var msgContainer = document.getElementById("chatMessages");
+        if (msgContainer) msgContainer.innerHTML = "<p class=\"chat-empty\">加载中...</p>";
+
+        refreshChatMessages(true);
+
+        // 定时轮询新消息
+        if (chatPollTimer) clearInterval(chatPollTimer);
+        chatPollTimer = setInterval(function () { refreshChatMessages(false); }, 3000);
+    }
+
+    function refreshChatMessages(isInitial) {
+        if (!chatFriendId || !ZXF.api || !ZXF.userId) return;
+        ZXF.api.getChatMessages(ZXF.userId, chatFriendId).then(function (data) {
+            if (data && data.messages) {
+                renderChatMessages(data.messages, isInitial);
+            }
+        }).catch(function () {});
+    }
+
+    function renderChatMessages(messages, scrollToBottom) {
+        var container = document.getElementById("chatMessages");
+        if (!container) return;
+
+        if (messages.length === 0) {
+            container.innerHTML = "<p class=\"chat-empty\">开始聊天吧</p>";
+            return;
+        }
+
+        var html = "";
+        for (var i = 0; i < messages.length; i++) {
+            var msg = messages[i];
+            var isMine = msg.from === ZXF.userId;
+            var timeStr = formatChatTime(msg.timestamp);
+
+            if (msg.type === "pk_request") {
+                if (isMine) {
+                    html += "<div class=\"chat-msg mine\">⚔ 我发起了PK邀请<div class=\"chat-msg-time\">" + timeStr + "</div></div>";
+                } else {
+                    html += "<div class=\"chat-pk-card\">" +
+                            "<div class=\"pk-card-text\">⚔ <strong>" + escapeHtml(friendNickFromId(msg.from)) + "</strong> 邀请你PK对战!</div>" +
+                            "<div class=\"pk-card-actions\">" +
+                            "<button class=\"chat-pk-accept\" data-msg-from=\"" + msg.from + "\">接受</button>" +
+                            "<button class=\"chat-pk-decline\" data-msg-from=\"" + msg.from + "\">拒绝</button>" +
+                            "</div><div class=\"chat-msg-time\">" + timeStr + "</div></div>";
+                }
+            } else if (msg.type === "pk_accept") {
+                html += "<div class=\"chat-pk-result accepted\">✅ " + (isMine ? "对方接受了你的PK邀请!" : "你接受了PK邀请!") + " <span class=\"chat-msg-time\">" + timeStr + "</span></div>";
+            } else if (msg.type === "pk_decline") {
+                html += "<div class=\"chat-pk-result declined\">❌ " + (isMine ? "对方拒绝了PK邀请" : "你拒绝了PK邀请") + " <span class=\"chat-msg-time\">" + timeStr + "</span></div>";
+            } else {
+                html += "<div class=\"chat-msg " + (isMine ? "mine" : "theirs") + "\">" +
+                        escapeHtml(msg.text) +
+                        "<div class=\"chat-msg-time\">" + timeStr + "</div></div>";
+            }
+        }
+
+        container.innerHTML = html;
+
+        if (scrollToBottom) {
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 绑定 PK 邀请卡片的接受/拒绝按钮
+        var acceptBtns = container.querySelectorAll(".chat-pk-accept");
+        for (var a = 0; a < acceptBtns.length; a++) {
+            acceptBtns[a].addEventListener("click", function () {
+                var fromId = this.getAttribute("data-msg-from");
+                acceptPKRequest(fromId);
+            });
+        }
+        var declineBtns = container.querySelectorAll(".chat-pk-decline");
+        for (var d = 0; d < declineBtns.length; d++) {
+            declineBtns[d].addEventListener("click", function () {
+                var fromId = this.getAttribute("data-msg-from");
+                declinePKRequest(fromId);
+            });
+        }
+    }
+
+    function friendNickFromId(fid) {
+        var f = ZXF.friends.find(function (x) { return x.userId === fid; });
+        return f ? f.nickname : "好友";
+    }
+
+    function formatChatTime(ts) {
+        var d = new Date(ts);
+        return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    }
+
+    function updateChatOnlineBadge() {
+        var badge = document.getElementById("chatOnlineBadge");
+        if (!badge || !chatFriendId) return;
+        var online = friendsOnlineMap[chatFriendId] === true;
+        badge.textContent = online ? "在线" : "离线";
+        badge.className = "chat-online-badge " + (online ? "online" : "offline");
+    }
+
+    function sendTextMessage() {
+        var input = document.getElementById("chatInput");
+        if (!input || !ZXF.api || !ZXF.userId || !chatFriendId) return;
+        var text = input.value.trim();
+        if (!text) return;
+        input.value = "";
+
+        ZXF.api.sendChatMessage(ZXF.userId, chatFriendId, text, "chat").then(function () {
+            refreshChatMessages(true);
+        }).catch(function () {});
+    }
+
+    function sendPKRequest(friendId) {
+        if (!ZXF.api || !ZXF.userId) return;
+        ZXF.api.sendChatMessage(ZXF.userId, friendId, "我们PK一把!", "pk_request").then(function () {
+            refreshChatMessages(true);
+        }).catch(function () {});
+    }
+
+    function acceptPKRequest(fromId) {
+        if (!ZXF.api || !ZXF.userId) return;
+        // 发送接受消息
+        ZXF.api.sendChatMessage(ZXF.userId, fromId, "接受", "pk_accept").then(function () {
+            refreshChatMessages(true);
+            // 关闭聊天并直接发起好友 PK
+            var chatModal = document.getElementById("chatModal");
+            if (chatModal) chatModal.classList.add("hidden");
+            if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+            startFriendPK(fromId);
+        }).catch(function () {});
+    }
+
+    function declinePKRequest(fromId) {
+        if (!ZXF.api || !ZXF.userId) return;
+        ZXF.api.sendChatMessage(ZXF.userId, fromId, "拒绝", "pk_decline").then(function () {
+            refreshChatMessages(true);
+        }).catch(function () {});
+    }
+
     // ========== 个人中心 + 好友 ==========
     function initProfileUI() {
         var modal = document.getElementById("profileModal");
@@ -752,7 +1069,7 @@
                         msg.textContent = "已添加好友: " + (result.friend ? result.friend.nickname : friendId);
                         msg.className = "profile-add-msg success";
                         input.value = "";
-                        renderFriendsList();
+                        renderFriendsSidebar();
                     } else {
                         msg.textContent = result.error === "user_not_found" ? "未找到该用户" :
                                          result.error === "cannot_add_self" ? "不能添加自己" : "添加失败";
@@ -781,54 +1098,6 @@
         if (uidEl) uidEl.textContent = ZXF.userId || "";
         if (nickInput) nickInput.value = ZXF.nickname || "";
         if (bestEl) bestEl.textContent = String(ZXF.bestScore || 0).padStart(5, "0");
-        renderFriendsList();
-    }
-
-    function renderFriendsList() {
-        var container = document.getElementById("friendsListContainer");
-        var countEl = document.getElementById("friendCount");
-        if (!container || !ZXF.api || !ZXF.userId) return;
-
-        ZXF.api.getFriendsList(ZXF.userId).then(function (data) {
-            if (data && data.friends) {
-                ZXF.friends = data.friends;
-                if (countEl) countEl.textContent = data.friends.length;
-                if (data.friends.length === 0) {
-                    container.innerHTML = "<p class=\"friends-empty\">暂无好友，快去添加吧</p>";
-                    return;
-                }
-                container.innerHTML = data.friends.map(function (f) {
-                    return "<div class=\"friend-row\">" +
-                           "<span class=\"friend-nickname\">" + escapeHtml(f.nickname) + "</span>" +
-                           "<span class=\"friend-best\">" + String(f.bestScore || 0).padStart(5, "0") + "</span>" +
-                           "<button class=\"friend-pk-btn\" data-friend-id=\"" + f.userId + "\">PK</button>" +
-                           "<button class=\"friend-delete-btn\" data-friend-id=\"" + f.userId + "\">&times;</button>" +
-                           "</div>";
-                }).join("");
-
-                // 绑定好友 PK 按钮
-                var pkBtns = container.querySelectorAll(".friend-pk-btn");
-                for (var i = 0; i < pkBtns.length; i++) {
-                    pkBtns[i].addEventListener("click", function (e) {
-                        e.stopPropagation();
-                        var fid = this.getAttribute("data-friend-id");
-                        startFriendPK(fid);
-                    });
-                }
-
-                // 绑定删除按钮
-                var delBtns = container.querySelectorAll(".friend-delete-btn");
-                for (var j = 0; j < delBtns.length; j++) {
-                    delBtns[j].addEventListener("click", function (e) {
-                        e.stopPropagation();
-                        var fid = this.getAttribute("data-friend-id");
-                        ZXF.api.removeFriend(ZXF.userId, fid).then(function () {
-                            renderFriendsList();
-                        }).catch(function () {});
-                    });
-                }
-            }
-        }).catch(function () {});
     }
 
     function startFriendPK(friendUserId) {
@@ -973,6 +1242,8 @@
         initPKUI();
         initOnlineLeaderboardUI();
         initProfileUI();
+        initFriendsSidebar();
+        initChatModal();
         renderScoreHistory();
         loadAssets();
 
@@ -986,6 +1257,10 @@
                         nickDisplay.textContent = result.nickname;
                         nickDisplay.classList.add("nickname-loaded");
                     }
+                    // 加载好友列表和在线状态
+                    renderFriendsSidebar();
+                    fetchOnlineStatus();
+                    startOnlinePolling();
                 }
             }).catch(function () {});
 

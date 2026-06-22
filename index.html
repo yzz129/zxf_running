@@ -219,13 +219,7 @@
                                 <button id="addFriendBtn" class="profile-add-btn" type="button">添加</button>
                             </div>
                             <p id="addFriendMsg" class="profile-add-msg hidden"></p>
-                        </div>
-                        <div class="profile-divider"></div>
-                        <div class="profile-section">
-                            <label class="profile-label">好友列表 <span id="friendCount" class="friend-count">0</span></label>
-                            <div id="friendsListContainer" class="friends-list-container">
-                                <p class="friends-empty">暂无好友，快去添加吧</p>
-                            </div>
+                            <p class="profile-hint">添加后可在左侧「好友列表」中查看和管理好友</p>
                         </div>
                     </div>
                 </div>
@@ -247,6 +241,40 @@
             <div class="douyin-card">
                 <img src="assets/douyin.png" alt="抖音二维码">
                 <button id="douyinClose" class="douyin-close" type="button">&times;</button>
+            </div>
+        </div>
+
+        <!-- 好友侧边栏 -->
+        <div class="friends-panel" id="friendsPanel">
+            <div class="panel-header" id="friendsToggle">
+                <span class="panel-title">👥 好友列表</span>
+                <span class="history-count" id="friendsOnlineCount">0</span>
+                <span class="toggle-arrow">▶</span>
+            </div>
+            <div class="panel-body hidden" id="friendsBody">
+                <div id="sidebarFriendsList" class="sidebar-friends-list">
+                    <p class="friends-empty">暂无好友</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 聊天弹窗 -->
+        <div id="chatModal" class="chat-modal hidden">
+            <div class="chat-backdrop"></div>
+            <div class="chat-card">
+                <div class="chat-header">
+                    <span id="chatFriendName" class="chat-friend-name"></span>
+                    <span id="chatOnlineBadge" class="chat-online-badge"></span>
+                    <button id="chatClose" class="chat-close-btn" type="button">&times;</button>
+                </div>
+                <div id="chatMessages" class="chat-messages">
+                    <p class="chat-empty">开始聊天吧</p>
+                </div>
+                <div class="chat-input-row">
+                    <input id="chatInput" class="chat-input" type="text" placeholder="输入消息..." maxlength="200">
+                    <button id="chatSendBtn" class="chat-send-btn" type="button">发送</button>
+                    <button id="chatPKBtn" class="chat-pk-btn" type="button">⚔️ PK</button>
+                </div>
             </div>
         </div>
 
