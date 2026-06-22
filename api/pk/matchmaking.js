@@ -64,6 +64,53 @@ module.exports = async function handler(req, res) {
             return;
           }
 
+          // 好友 PK：指定对手
+          const friendUserId = data.friendUserId;
+          if (friendUserId && friendUserId !== uid) {
+            // 检查好友是否已在其他匹配中
+            const friendMatchId = await kv.get('pk:match:' + friendUserId);
+            if (friendMatchId) {
+              res.statusCode = 409;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'friend_busy' }));
+              return;
+            }
+
+            // 确保自己没有活跃匹配
+            const myMatch = await kv.get('pk:match:' + uid);
+            if (myMatch) {
+              await kv.del('pk:match:' + uid);
+            }
+
+            const crypto = require('crypto');
+            const matchId = crypto.randomUUID();
+
+            await kv.hset('pk:match:' + matchId, {
+              player1: uid,
+              player2: friendUserId,
+              created_at: String(Date.now()),
+              status: 'matched',
+              p1_progress: '',
+              p2_progress: '',
+              p1_last_sync: '0',
+              p2_last_sync: '0'
+            });
+            await kv.expire('pk:match:' + matchId, MATCH_TTL);
+            await kv.set('pk:match:' + uid, matchId, { ex: MATCH_TTL });
+            await kv.set('pk:match:' + friendUserId, matchId, { ex: MATCH_TTL });
+
+            const oppUser = await kv.hgetall('user:' + friendUserId);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({
+              status: 'matched',
+              matchId: matchId,
+              opponentId: friendUserId,
+              opponentNickname: (oppUser && oppUser.nickname) ? oppUser.nickname : '对手'
+            }));
+            return;
+          }
+
           // 取消匹配
           if (cancel === '1') {
             // 从队列移除

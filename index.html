@@ -48,7 +48,7 @@
                 <div class="hud-left">
                     <button id="settingsButton" class="settings-button" type="button" aria-label="设置">⚙</button>
                     <div class="hud-title">张雪峰快跑</div>
-                    <span id="nicknameDisplay" class="nickname-display"></span>
+                    <button id="nicknameDisplay" class="nickname-display" type="button" title="查看个人中心"></button>
                 </div>
                 <div class="hud-right">
                     <div class="score-wrap">
@@ -162,6 +162,53 @@
                     <h2 id="pkResultTitle"></h2>
                     <p id="pkResultDetail"></p>
                     <button id="pkResultClose" class="settings-btn resume-btn" type="button">返回</button>
+                </div>
+            </div>
+
+            <!-- 个人中心弹窗 -->
+            <div id="profileModal" class="profile-modal hidden">
+                <div class="profile-backdrop"></div>
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <span class="profile-card-title">个人中心</span>
+                        <button id="profileClose" class="help-close" type="button">&times;</button>
+                    </div>
+                    <div class="profile-card-body">
+                        <div class="profile-section">
+                            <label class="profile-label">我的ID</label>
+                            <div class="profile-id-row">
+                                <code id="profileUserId" class="profile-uid"></code>
+                                <button id="copyUserId" class="profile-copy-btn" type="button">复制</button>
+                            </div>
+                        </div>
+                        <div class="profile-section">
+                            <label class="profile-label">昵称</label>
+                            <div class="profile-nick-row">
+                                <input id="profileNicknameInput" class="profile-nick-input" type="text" maxlength="20" placeholder="输入新昵称">
+                                <button id="saveNickname" class="profile-save-btn" type="button">保存</button>
+                            </div>
+                        </div>
+                        <div class="profile-section">
+                            <label class="profile-label">最佳成绩</label>
+                            <span id="profileBestScore" class="profile-best-score">0</span>
+                        </div>
+                        <div class="profile-divider"></div>
+                        <div class="profile-section">
+                            <label class="profile-label">添加好友</label>
+                            <div class="profile-add-friend-row">
+                                <input id="addFriendInput" class="profile-add-input" type="text" placeholder="输入好友的ID">
+                                <button id="addFriendBtn" class="profile-add-btn" type="button">添加</button>
+                            </div>
+                            <p id="addFriendMsg" class="profile-add-msg hidden"></p>
+                        </div>
+                        <div class="profile-divider"></div>
+                        <div class="profile-section">
+                            <label class="profile-label">好友列表 <span id="friendCount" class="friend-count">0</span></label>
+                            <div id="friendsListContainer" class="friends-list-container">
+                                <p class="friends-empty">暂无好友，快去添加吧</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

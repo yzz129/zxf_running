@@ -34,6 +34,14 @@
       });
     },
 
+    _put: function (path, body) {
+      return ZXF.api._fetch(path, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    },
+
     // ========== 昵称 ==========
     getOrCreateNickname: async function () {
       var storedUserId = localStorage.getItem('zxf_user_id');
@@ -86,12 +94,42 @@
       return ZXF.api._post('/api/pk/matchmaking', { userId: userId });
     },
 
+    joinFriendPK: async function (userId, friendUserId) {
+      return ZXF.api._post('/api/pk/matchmaking', { userId: userId, friendUserId: friendUserId });
+    },
+
     pollMatchStatus: async function (userId) {
       return ZXF.api._get('/api/pk/matchmaking?userId=' + encodeURIComponent(userId));
     },
 
     cancelPKQueue: async function (userId) {
       return ZXF.api._post('/api/pk/matchmaking?cancel=1', { userId: userId });
+    },
+
+    // ========== 用户资料 ==========
+    getProfile: async function (userId) {
+      return ZXF.api._get('/api/user/profile?userId=' + encodeURIComponent(userId));
+    },
+
+    updateNickname: async function (userId, newNickname) {
+      return ZXF.api._put('/api/user/profile', { userId: userId, newNickname: newNickname });
+    },
+
+    // ========== 好友 ==========
+    searchUser: async function (friendUserId) {
+      return ZXF.api._get('/api/friends/add?friendUserId=' + encodeURIComponent(friendUserId));
+    },
+
+    addFriend: async function (userId, friendUserId) {
+      return ZXF.api._post('/api/friends/add', { userId: userId, friendUserId: friendUserId });
+    },
+
+    getFriendsList: async function (userId) {
+      return ZXF.api._get('/api/friends/list?userId=' + encodeURIComponent(userId));
+    },
+
+    removeFriend: async function (userId, friendUserId) {
+      return ZXF.api._post('/api/friends/list', { userId: userId, friendUserId: friendUserId });
     },
 
     // ========== PK 同步 ==========

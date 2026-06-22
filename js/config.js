@@ -113,13 +113,15 @@
     // ========== 后端/用户 ==========
     ZXF.userId = null;
     ZXF.nickname = null;
+    ZXF.friends = [];           // [{ userId, nickname, bestScore }]
 
     // ========== PK 模式状态 ==========
     ZXF.pk = {
-        mode: "solo",           // "solo" | "matchmaking" | "matched" | "countdown" | "racing" | "result"
+        mode: "solo",           // "solo" | "matchmaking" | "friend_waiting" | "matched" | "countdown" | "racing" | "result"
         matchId: null,
         opponentId: null,
         opponentNickname: null,
+        isFriendPK: false,      // 是否为好友对战
         opponent: {             // 最新同步的对手状态
             score: 0,
             distance: 0,

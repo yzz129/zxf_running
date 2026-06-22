@@ -338,6 +338,7 @@
         ZXF.pk.matchId = null;
         ZXF.pk.opponentId = null;
         ZXF.pk.opponentNickname = null;
+        ZXF.pk.isFriendPK = false;
         ZXF.pk.result = null;
         ZXF.pk.selfFinished = false;
         ZXF.pk.opponent = { score: 0, distance: 0, alive: true, finished: false, lastUpdate: 0 };
@@ -655,6 +656,218 @@
         });
     }
 
+    // ========== 个人中心 + 好友 ==========
+    function initProfileUI() {
+        var modal = document.getElementById("profileModal");
+        var nickBtn = document.getElementById("nicknameDisplay");
+        var closeBtn = document.getElementById("profileClose");
+        var backdrop = modal ? modal.querySelector(".profile-backdrop") : null;
+        var copyBtn = document.getElementById("copyUserId");
+        var saveNickBtn = document.getElementById("saveNickname");
+        var addFriendBtn = document.getElementById("addFriendBtn");
+        var nickInput = document.getElementById("profileNicknameInput");
+
+        if (!modal) return;
+
+        var wasPlaying = false;
+
+        function openProfile() {
+            wasPlaying = ZXF.phase === "playing";
+            if (wasPlaying) ZXF.pauseGame();
+            modal.classList.remove("hidden");
+            renderProfile();
+        }
+
+        function closeProfile() {
+            modal.classList.add("hidden");
+            if (wasPlaying && ZXF.phase === "paused") {
+                wasPlaying = false;
+                ZXF.startCountdown(function () { ZXF.resumeGame(); });
+            }
+        }
+
+        if (nickBtn) {
+            nickBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                openProfile();
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                closeProfile();
+            });
+        }
+
+        if (backdrop) {
+            backdrop.addEventListener("click", function (e) {
+                e.stopPropagation();
+                closeProfile();
+            });
+        }
+
+        // 阻止弹窗内点击冒泡
+        modal.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+
+        // 复制 ID
+        if (copyBtn) {
+            copyBtn.addEventListener("click", function () {
+                var uidEl = document.getElementById("profileUserId");
+                if (!uidEl) return;
+                var text = uidEl.textContent;
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text).then(function () {
+                        copyBtn.textContent = "已复制!";
+                        setTimeout(function () { copyBtn.textContent = "复制"; }, 1500);
+                    });
+                }
+            });
+        }
+
+        // 保存昵称
+        if (saveNickBtn && nickInput) {
+            saveNickBtn.addEventListener("click", function () {
+                var newNick = nickInput.value.trim();
+                if (!newNick || newNick.length < 1 || newNick.length > 20) return;
+                if (!ZXF.api || !ZXF.userId) return;
+                ZXF.api.updateNickname(ZXF.userId, newNick).then(function (result) {
+                    if (result && !result.error) {
+                        ZXF.nickname = result.nickname;
+                        localStorage.setItem('zxf_nickname', result.nickname);
+                        var display = document.getElementById("nicknameDisplay");
+                        if (display) display.textContent = result.nickname;
+                        saveNickBtn.textContent = "已保存!";
+                        setTimeout(function () { saveNickBtn.textContent = "保存"; }, 1500);
+                        if (ZXF.fetchLeaderboard) ZXF.fetchLeaderboard();
+                    }
+                }).catch(function () {});
+            });
+        }
+
+        // 添加好友
+        if (addFriendBtn) {
+            addFriendBtn.addEventListener("click", function () {
+                var input = document.getElementById("addFriendInput");
+                var msg = document.getElementById("addFriendMsg");
+                if (!input || !msg || !ZXF.api || !ZXF.userId) return;
+                var friendId = input.value.trim();
+                if (!friendId) return;
+                ZXF.api.addFriend(ZXF.userId, friendId).then(function (result) {
+                    msg.classList.remove("hidden");
+                    if (result && !result.error) {
+                        msg.textContent = "已添加好友: " + (result.friend ? result.friend.nickname : friendId);
+                        msg.className = "profile-add-msg success";
+                        input.value = "";
+                        renderFriendsList();
+                    } else {
+                        msg.textContent = result.error === "user_not_found" ? "未找到该用户" :
+                                         result.error === "cannot_add_self" ? "不能添加自己" : "添加失败";
+                        msg.className = "profile-add-msg error";
+                    }
+                }).catch(function () {
+                    msg.classList.remove("hidden");
+                    msg.textContent = "网络错误";
+                    msg.className = "profile-add-msg error";
+                });
+            });
+        }
+
+        // ESC 关闭
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+                closeProfile();
+            }
+        });
+    }
+
+    function renderProfile() {
+        var uidEl = document.getElementById("profileUserId");
+        var nickInput = document.getElementById("profileNicknameInput");
+        var bestEl = document.getElementById("profileBestScore");
+        if (uidEl) uidEl.textContent = ZXF.userId || "";
+        if (nickInput) nickInput.value = ZXF.nickname || "";
+        if (bestEl) bestEl.textContent = String(ZXF.bestScore || 0).padStart(5, "0");
+        renderFriendsList();
+    }
+
+    function renderFriendsList() {
+        var container = document.getElementById("friendsListContainer");
+        var countEl = document.getElementById("friendCount");
+        if (!container || !ZXF.api || !ZXF.userId) return;
+
+        ZXF.api.getFriendsList(ZXF.userId).then(function (data) {
+            if (data && data.friends) {
+                ZXF.friends = data.friends;
+                if (countEl) countEl.textContent = data.friends.length;
+                if (data.friends.length === 0) {
+                    container.innerHTML = "<p class=\"friends-empty\">暂无好友，快去添加吧</p>";
+                    return;
+                }
+                container.innerHTML = data.friends.map(function (f) {
+                    return "<div class=\"friend-row\">" +
+                           "<span class=\"friend-nickname\">" + escapeHtml(f.nickname) + "</span>" +
+                           "<span class=\"friend-best\">" + String(f.bestScore || 0).padStart(5, "0") + "</span>" +
+                           "<button class=\"friend-pk-btn\" data-friend-id=\"" + f.userId + "\">PK</button>" +
+                           "<button class=\"friend-delete-btn\" data-friend-id=\"" + f.userId + "\">&times;</button>" +
+                           "</div>";
+                }).join("");
+
+                // 绑定好友 PK 按钮
+                var pkBtns = container.querySelectorAll(".friend-pk-btn");
+                for (var i = 0; i < pkBtns.length; i++) {
+                    pkBtns[i].addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        var fid = this.getAttribute("data-friend-id");
+                        startFriendPK(fid);
+                    });
+                }
+
+                // 绑定删除按钮
+                var delBtns = container.querySelectorAll(".friend-delete-btn");
+                for (var j = 0; j < delBtns.length; j++) {
+                    delBtns[j].addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        var fid = this.getAttribute("data-friend-id");
+                        ZXF.api.removeFriend(ZXF.userId, fid).then(function () {
+                            renderFriendsList();
+                        }).catch(function () {});
+                    });
+                }
+            }
+        }).catch(function () {});
+    }
+
+    function startFriendPK(friendUserId) {
+        if (!ZXF.api || !ZXF.userId) return;
+        if (ZXF.phase === "playing" || ZXF.pk.mode === "racing") return;
+
+        var profileModal = document.getElementById("profileModal");
+        if (profileModal) profileModal.classList.add("hidden");
+
+        ZXF.pk.mode = "friend_waiting";
+        ZXF.pk.isFriendPK = true;
+
+        ZXF.api.joinFriendPK(ZXF.userId, friendUserId).then(function (result) {
+            if (result && !result.error && result.status === "matched") {
+                ZXF.pk.matchId = result.matchId;
+                ZXF.pk.opponentId = result.opponentId;
+                ZXF.pk.opponentNickname = result.opponentNickname || "好友";
+                ZXF.pk.mode = "matched";
+                ZXF.startPKCountdown();
+            } else if (result && result.error === "friend_busy") {
+                alert("好友正在对战中，请稍后再试");
+                ZXF.pk.mode = "solo";
+            } else {
+                alert("发起对战失败，好友可能离线");
+                ZXF.pk.mode = "solo";
+            }
+        }).catch(function () {
+            alert("网络错误");
+            ZXF.pk.mode = "solo";
+        });
+    }
+
     // ========== PK UI 初始化 ==========
     function initPKUI() {
         // PK 对战按钮
@@ -766,6 +979,7 @@
         initDouyinModal();
         initPKUI();
         initOnlineLeaderboardUI();
+        initProfileUI();
         renderScoreHistory();
         loadAssets();
 
