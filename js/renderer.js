@@ -507,6 +507,20 @@
         var player = ZXF.player;
         var game = ZXF.game;
         var W = ZXF.CANVAS_W;
+        var opponentDead = !pk.opponent.alive || pk.opponent.finished;
+
+        // 对手已死亡，只显示一个半透明标记，不画影子
+        if (opponentDead) {
+            var markX = Math.max(80, Math.min(W - 80, player.x + player.standW / 2));
+            ctx.globalAlpha = 0.6;
+            ctx.fillStyle = "#ef4444";
+            ctx.font = "bold 13px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("💀 " + (pk.opponentNickname || "对手") + " 已阵亡", markX, ZXF.GROUND_Y - 60);
+            ctx.globalAlpha = 1;
+            ctx.textAlign = "start";
+            return;
+        }
 
         // 将对手的 distance 映射为视觉 x 偏移
         var distDelta = (pk.opponent.distance - game.distance) * 0.5;
@@ -540,13 +554,6 @@
         ctx.fillStyle = diff > 0 ? "#4ade80" : diff < 0 ? "#ef4444" : "#facc15";
         ctx.font = "bold 10px 'JetBrains Mono', monospace";
         ctx.fillText(diffText, labelX, ghostY - 18);
-
-        // 对手死亡标记
-        if (!pk.opponent.alive || pk.opponent.finished) {
-            ctx.fillStyle = "rgba(239, 68, 68, 0.8)";
-            ctx.font = "bold 10px sans-serif";
-            ctx.fillText("已结束", labelX, ghostY - 30);
-        }
 
         ctx.globalAlpha = 1;
         ctx.textAlign = "start";

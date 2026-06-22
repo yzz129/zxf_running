@@ -407,13 +407,19 @@
     ZXF.pk.checkPKResult = function () {
         var pk = ZXF.pk;
         if (!pk.selfFinished) return;
-        if (!pk.opponent.finished && pk.opponent.alive) return;
 
-        // 双方都已结束或对手不在线（超过 10s 无更新）
-        var opponentStale = Date.now() - pk.opponent.lastUpdate > 10000;
-        if (pk.opponent.finished || !pk.opponent.alive || opponentStale) {
+        // 对手数据超时（超过 15s 无更新），强制结算
+        var opponentStale = Date.now() - pk.opponent.lastUpdate > 15000;
+        if (opponentStale) {
+            ZXF.pk.finalizePKMatch();
+            return;
+        }
+
+        // 对手已结束（finished 或 !alive）→ 结算
+        if (pk.opponent.finished || !pk.opponent.alive) {
             ZXF.pk.finalizePKMatch();
         }
+        // 否则对手还在跑，继续等待
     };
 
     // PK 结算
