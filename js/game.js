@@ -194,6 +194,8 @@
         var player = ZXF.player;
         var game = ZXF.game;
 
+        // 确保无敌模式关闭
+        ZXF.modifiers.invincible = false;
         input.jumpHeld = false;
         input.duckHeld = false;
         player.w = player.standW;
@@ -230,6 +232,17 @@
     ZXF.endGame = function () {
         if (ZXF.phase === "gameover") return;
 
+        // PK 模式下玩家死亡：不走普通结束流程，进入等待对手状态
+        if (ZXF.pk.mode === "racing" && !ZXF.pk.selfFinished) {
+            if (ZXF.playDeathSound) ZXF.playDeathSound();
+            ZXF.bestScore = Math.max(ZXF.bestScore, ZXF.game.score);
+            localStorage.setItem("zhang-runner-best", String(ZXF.bestScore));
+            ZXF.updateScoreDisplay();
+            if (ZXF.saveScore) ZXF.saveScore(ZXF.game.score);
+            ZXF.endPKGame();
+            return;
+        }
+
         ZXF.phase = "gameover";
         if (ZXF.playDeathSound) ZXF.playDeathSound();
 
@@ -237,12 +250,6 @@
         localStorage.setItem("zhang-runner-best", String(ZXF.bestScore));
         ZXF.updateScoreDisplay();
         if (ZXF.saveScore) ZXF.saveScore(ZXF.game.score);
-
-        // PK 模式：不显示普通结束界面，进入等待对手状态
-        if (ZXF.pk.mode === "racing" && !ZXF.pk.selfFinished) {
-            ZXF.endPKGame();
-            return;
-        }
 
         ZXF.dom.overlayText.textContent = "你跑不过我你信吗！按空格 / ↑ / 点击再跑一把。";
         ZXF.dom.startButton.textContent = "重来";
@@ -458,6 +465,9 @@
     // 启动 PK 比赛（倒计时后调用）
     ZXF.pk.startPKRace = function () {
         var pk = ZXF.pk;
+
+        // 强制重置所有关键状态
+        ZXF.modifiers.invincible = false;
         pk.mode = "racing";
         pk.selfFinished = false;
         pk.syncTimer = 0;
@@ -468,10 +478,21 @@
         pk.opponent.finished = false;
         pk.opponent.lastUpdate = Date.now();
 
+        // 隐藏所有可能阻挡的弹窗
+        ZXF.dom.overlay.classList.add("hidden");
+        var overlays = document.querySelectorAll(".pk-result-overlay, .pk-matchmaking-overlay, .pk-match-found-overlay, .chat-modal, .player-popup, .profile-modal, .settings-modal, .help-modal");
+        for (var i = 0; i < overlays.length; i++) {
+            overlays[i].classList.add("hidden");
+        }
+
         ZXF.resetGame();
         ZXF.phase = "playing";
         if (ZXF.playBgm) ZXF.playBgm();
         ZXF.lastTime = performance.now();
+
+        // 确保游戏循环启动
+        ctx = ZXF.ctx;
+        ZXF.drawFrame(0);
         requestAnimationFrame(ZXF.loop);
     };
 
