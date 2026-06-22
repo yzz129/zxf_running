@@ -1108,30 +1108,114 @@ body::after {
     }
 }
 
-/* ===== 小屏手机优化（<= 380px） ===== */
-@media (max-width: 380px) {
-    html, body {
-        padding: 6px 6px;
-    }
-
-    .page-shell {
-        gap: 8px;
-    }
-
+/* ===== 移动端 HUD 两行布局 ===== */
+@media (max-width: 640px) {
     .hud {
-        padding: 10px 14px;
-        font-size: 14px;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .hud-left {
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 4px;
+    }
+
+    .hud-right {
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 4px;
+        justify-content: flex-end;
     }
 
     .hud-title {
-        font-size: 15px;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 80px;
+    }
+
+    .nickname-display {
+        font-size: 10px;
+        padding: 1px 6px;
+        max-width: 60px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .score-wrap {
-        gap: 10px;
-        font-size: 13px;
+        gap: 6px;
+        font-size: 12px;
     }
 
+    .pk-button {
+        width: auto;
+        height: 26px;
+        padding: 0 6px;
+        font-size: 10px;
+        border-radius: 10px;
+    }
+
+    .help-button,
+    .settings-button {
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+    }
+}
+
+/* ===== 超小屏 (≤380px) 进一步缩小 ===== */
+@media (max-width: 380px) {
+    .hud {
+        padding: 4px 6px;
+        gap: 2px;
+    }
+
+    .hud-left,
+    .hud-right {
+        gap: 2px;
+    }
+
+    .hud-title {
+        font-size: 11px;
+        max-width: 50px;
+    }
+
+    .nickname-display {
+        font-size: 9px;
+        max-width: 48px;
+        padding: 1px 4px;
+    }
+
+    .score-wrap {
+        gap: 4px;
+        font-size: 11px;
+    }
+
+    #best {
+        display: none;
+    }
+
+    .pk-button {
+        height: 24px;
+        padding: 0 5px;
+        font-size: 9px;
+    }
+
+    .help-button,
+    .settings-button {
+        width: 24px;
+        height: 24px;
+        font-size: 11px;
+    }
+}
+
+/* ===== 超小屏 (≤380px) 其他调整 ===== */
+@media (max-width: 380px) {
     #overlay h1 {
         font-size: 22px;
     }
@@ -1206,7 +1290,8 @@ body::after {
     .help-card,
     #overlay,
     .modifier-panel,
-    .score-history {
+    .score-history,
+    .leaderboard-panel {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
     }
