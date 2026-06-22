@@ -134,7 +134,7 @@
 
     // ========== 在线状态 ==========
     heartbeat: async function (userId) {
-      return ZXF.api._post('/api/friends/online', { userId: userId });
+      return ZXF.api._get('/api/friends/online?ping=1&userId=' + encodeURIComponent(userId));
     },
 
     getOnlineStatus: async function (friendIds) {

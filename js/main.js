@@ -887,13 +887,15 @@
                 return;
             }
 
-            // 先拉在线状态再渲染
+            // 拉在线状态（失败也继续渲染）
             var ids = data.friends.map(function (f) { return f.userId; });
-            ZXF.api.getOnlineStatus(ids).then(function (onlineData) {
+            var onlinePromise = ZXF.api.getOnlineStatus(ids).then(function (onlineData) {
                 if (onlineData && onlineData.online) {
                     friendsOnlineMap = onlineData.online;
                 }
+            }).catch(function () {});
 
+            onlinePromise.then(function () {
                 var onlineCount = 0;
                 var html = "";
                 for (var i = 0; i < data.friends.length; i++) {
@@ -939,7 +941,7 @@
                         }).catch(function () {});
                     });
                 }
-            }).catch(function () {});
+            });
         }).catch(function () {});
     }
 
@@ -953,7 +955,15 @@
 
     function doHeartbeat() {
         if (!ZXF.api || !ZXF.userId) return;
-        ZXF.api.heartbeat(ZXF.userId).catch(function () {});
+        ZXF.api.heartbeat(ZXF.userId).then(function (res) {
+            if (res && res.ok) {
+                console.log('[online] heartbeat ok, userId=' + ZXF.userId);
+            } else {
+                console.warn('[online] heartbeat failed:', res);
+            }
+        }).catch(function (e) {
+            console.warn('[online] heartbeat error:', e);
+        });
     }
 
     function refreshOnlineStatus() {
@@ -962,11 +972,14 @@
         var ids = ZXF.friends.map(function (f) { return f.userId; });
         if (ids.length > 0) {
             ZXF.api.getOnlineStatus(ids).then(function (data) {
+                console.log('[online] status check:', data);
                 if (data && data.online) {
                     friendsOnlineMap = data.online;
                     updateOnlineDotsAndCount();
                 }
-            }).catch(function () {});
+            }).catch(function (e) {
+                console.warn('[online] status check error:', e);
+            });
         }
     }
 
