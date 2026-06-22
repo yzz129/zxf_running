@@ -27,15 +27,14 @@ module.exports = async function handler(req, res) {
         withScores: true
       });
 
+      // zrange withScores 返回扁平数组 [member1, score1, member2, score2, ...]
       const entries = [];
-      for (let i = 0; i < results.length; i++) {
-        const entry = results[i];
-        // entry is [member, score] since withScores: true
-        const member = entry[0];
-        const score = entry[1];
+      for (let i = 0; i < results.length; i += 2) {
+        const member = results[i];
+        const score = results[i + 1];
         const user = await kv.hgetall('user:' + member);
         entries.push({
-          rank: offset + i + 1,
+          rank: offset + Math.floor(i / 2) + 1,
           userId: member,
           nickname: (user && user.nickname) ? user.nickname : 'unknown',
           score: score
