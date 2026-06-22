@@ -1207,13 +1207,28 @@
         }
     }
 
-    // ========== 禁止长按弹出菜单/选择（全局，二维码弹窗除外） ==========
+    // ========== 禁止长按弹出菜单/选择（全局，输入框和弹窗除外） ==========
+    function isEditable(el) {
+        if (!el) return false;
+        var tag = el.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+        if (el.isContentEditable) return true;
+        return false;
+    }
+
+    function isInAllowedZone(el) {
+        if (!el) return false;
+        return !!(el.closest("#douyinModal") || el.closest("#profileModal") ||
+                  el.closest("#chatModal") || el.closest("#helpModal") ||
+                  el.closest("#settingsModal"));
+    }
+
     document.addEventListener("contextmenu", function (e) {
-        if (e.target.closest("#douyinModal")) return;
+        if (isInAllowedZone(e.target)) return;
         e.preventDefault();
     });
     document.addEventListener("selectstart", function (e) {
-        if (e.target.closest("#douyinModal")) return;
+        if (isEditable(e.target) || isInAllowedZone(e.target)) return;
         e.preventDefault();
     });
     document.addEventListener("selectionchange", function () {
@@ -1222,7 +1237,7 @@
             var range = sel.getRangeAt(0);
             var node = range.commonAncestorContainer;
             var el = node.nodeType === 3 ? node.parentElement : node;
-            if (el && el.closest("#douyinModal")) return;
+            if (isEditable(el) || isInAllowedZone(el)) return;
             sel.removeAllRanges();
         }
     });

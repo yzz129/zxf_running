@@ -12,11 +12,19 @@
     -webkit-touch-callout: none;
 }
 html, body, div, span, p, a, button, h1, h2, h3, h4, h5, h6,
-li, ol, ul, table, tr, td, th, label, kbd, input, select, option {
+li, ol, ul, table, tr, td, th, label, kbd, select, option {
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+}
+
+/* 输入框允许正常选中/聚焦 */
+input, textarea, [contenteditable] {
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
 }
 button, .panel-header, .mod-option, .switch, .history-list li,
 a, .control-button, .settings-btn, .help-button, .settings-button,
