@@ -98,20 +98,50 @@
 
     // ========== 切屏自动暂停/恢复音频 ==========
     var bgmWasPlaying = false;
+
+    function handlePageHide() {
+        bgmWasPlaying = !bgm.paused;
+        if (bgmWasPlaying) {
+            bgm.pause();
+        }
+        // 同时暂停死亡音效
+        deathSound.pause();
+    }
+
+    function handlePageShow() {
+        if (bgmWasPlaying && (ZXF.phase === "playing" || ZXF.phase === "paused" || ZXF.phase === "countdown")) {
+            bgm.play().catch(function () {});
+        }
+        bgmWasPlaying = false;
+    }
+
+    // visibilitychange：切标签页
     document.addEventListener("visibilitychange", function () {
         if (document.hidden) {
-            // 切走：暂停 BGM
-            bgmWasPlaying = !bgm.paused;
-            if (bgmWasPlaying) {
-                bgm.pause();
-            }
+            handlePageHide();
         } else {
-            // 切回：如果之前正在播放且游戏未结束，恢复 BGM
-            if (bgmWasPlaying && (ZXF.phase === "playing" || ZXF.phase === "paused" || ZXF.phase === "countdown")) {
-                bgm.play().catch(function () {});
-            }
-            bgmWasPlaying = false;
+            handlePageShow();
         }
+    });
+
+    // pagehide：退到桌面 / 锁屏（移动端更可靠）
+    window.addEventListener("pagehide", function () {
+        handlePageHide();
+    });
+
+    // pageshow：从后台恢复
+    window.addEventListener("pageshow", function () {
+        handlePageShow();
+    });
+
+    // freeze：页面被冻结（某些移动浏览器会冻结标签页）
+    window.addEventListener("freeze", function () {
+        handlePageHide();
+    });
+
+    // resume：页面解冻
+    window.addEventListener("resume", function () {
+        handlePageShow();
     });
 
     // ========== 最高分 ==========
