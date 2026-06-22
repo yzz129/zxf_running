@@ -446,12 +446,17 @@
         });
     };
 
-    ZXF.showPKResult = function (result, myScore, oppScore, oppName) {
+    ZXF.showPKResult = function (result, myScore, oppScore, oppName, myDistance, oppDistance) {
         var overlay = document.getElementById("pkResultOverlay");
         var title = document.getElementById("pkResultTitle");
         var detail = document.getElementById("pkResultDetail");
 
         if (!overlay) return;
+
+        // 隐藏等待界面
+        var waitingOverlay = document.getElementById("pkWaitingOverlay");
+        if (waitingOverlay) waitingOverlay.classList.add("hidden");
+
         overlay.classList.remove("hidden");
 
         if (title) {
@@ -467,13 +472,27 @@
             }
         }
 
+        // 显示分数和距离
+        var myDist = myDistance || 0;
+        var oppDist = oppDistance || 0;
         if (detail) {
-            detail.textContent = "你的分数: " + String(myScore).padStart(5, "0") +
-                "  |  " + (oppName || "对手") + ": " + String(oppScore).padStart(5, "0");
+            detail.innerHTML =
+                "<div class=\"pk-result-row\"><span>你</span><span class=\"pk-result-score\">" + String(myScore).padStart(5, "0") + "分</span><span class=\"pk-result-dist\">" + Math.floor(myDist) + "m</span></div>" +
+                "<div class=\"pk-result-row\"><span>" + escapeHtml(oppName || "对手") + "</span><span class=\"pk-result-score\">" + String(oppScore).padStart(5, "0") + "分</span><span class=\"pk-result-dist\">" + Math.floor(oppDist) + "m</span></div>";
         }
 
         // 刷新排行榜
         if (ZXF.fetchLeaderboard) ZXF.fetchLeaderboard();
+    };
+
+    ZXF.showPKWaiting = function (oppName) {
+        var overlay = document.getElementById("pkWaitingOverlay");
+        var text = document.getElementById("pkWaitingText");
+        if (!overlay) return;
+        overlay.classList.remove("hidden");
+        if (text) {
+            text.textContent = "你已阵亡！等待 " + (oppName || "对手") + " 结束比赛...";
+        }
     };
 
     ZXF.resetToSoloMode = function () {
@@ -492,6 +511,8 @@
 
         var resultOverlay = document.getElementById("pkResultOverlay");
         if (resultOverlay) resultOverlay.classList.add("hidden");
+        var waitingOverlay = document.getElementById("pkWaitingOverlay");
+        if (waitingOverlay) waitingOverlay.classList.add("hidden");
         var matchFoundOverlay = document.getElementById("pkMatchFoundOverlay");
         if (matchFoundOverlay) matchFoundOverlay.classList.add("hidden");
 

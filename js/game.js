@@ -416,12 +416,15 @@
     // PK 结算
     ZXF.pk.finalizePKMatch = function () {
         var pk = ZXF.pk;
+        var myDistance = ZXF.game.distance;
+        var oppDistance = pk.opponent.distance;
         var myScore = ZXF.game.score;
         var oppScore = pk.opponent.score;
 
-        if (myScore > oppScore) {
+        // 按距离判断胜负
+        if (myDistance > oppDistance) {
             pk.result = "win";
-        } else if (myScore < oppScore) {
+        } else if (myDistance < oppDistance) {
             pk.result = "lose";
         } else {
             pk.result = "draw";
@@ -435,9 +438,9 @@
             ZXF.api.submitScore(ZXF.userId, myScore, ZXF.modifiers.speedMult !== 1 || ZXF.modifiers.densityMult !== 1 || ZXF.modifiers.invincible);
         }
 
-        // 显示 PK 结果 UI
+        // 显示 PK 结果 UI（传入双方距离）
         if (ZXF.showPKResult) {
-            ZXF.showPKResult(pk.result, myScore, oppScore, pk.opponentNickname);
+            ZXF.showPKResult(pk.result, myScore, oppScore, pk.opponentNickname, myDistance, oppDistance);
         }
     };
 
@@ -460,6 +463,11 @@
         // 继续游戏循环等待对手
         ZXF.phase = "playing";
         ZXF.updateScoreDisplay();
+
+        // 显示等待对手的提示
+        if (ZXF.showPKWaiting) {
+            ZXF.showPKWaiting(pk.opponentNickname);
+        }
     };
 
     // 启动 PK 比赛（倒计时后调用）
