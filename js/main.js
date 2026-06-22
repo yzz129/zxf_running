@@ -523,9 +523,20 @@
         if (text) {
             text.textContent = "你已阵亡！等待 " + (oppName || "对手") + " 结束比赛...";
         }
+        // 绑定强制退出按钮（每次 show 都重新绑定，确保事件有效）
+        var quitBtn = document.getElementById("pkForceQuitBtn");
+        if (quitBtn) {
+            var newBtn = quitBtn.cloneNode(true);
+            quitBtn.parentNode.replaceChild(newBtn, quitBtn);
+            newBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                ZXF.pk.forceQuitPK();
+            });
+        }
     };
 
     ZXF.resetToSoloMode = function () {
+        ZXF.pk.stopDeathPolling();
         ZXF.pk.mode = "solo";
         ZXF.pk.matchId = null;
         ZXF.pk.opponentId = null;

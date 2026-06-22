@@ -122,15 +122,13 @@
         opponentId: null,
         opponentNickname: null,
         isFriendPK: false,      // 是否为好友对战
-        opponent: {             // 最新同步的对手状态
+        opponent: {             // 对手最终结果（死亡后轮询获取）
             score: 0,
             distance: 0,
             alive: true,
             finished: false,
             lastUpdate: 0
         },
-        syncTimer: 0,           // 累计用于限流同步调用
-        syncInterval: 0.5,      // 500ms 同步一次（免费层够用）
         result: null,           // "win" | "lose" | "draw" 比赛结束后
         queuePollTimer: null,   // 匹配轮询定时器 ID
         selfFinished: false     // 自己是否已结束（等待对手）

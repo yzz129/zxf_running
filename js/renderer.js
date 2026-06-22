@@ -499,73 +499,12 @@
         ctx.globalAlpha = 1;
     }
 
-    // ========== PK 对手幽灵 ==========
-    function drawOpponentGhost() {
-        var pk = ZXF.pk;
-        if (pk.mode !== "racing" || !pk.opponent) return;
-
-        var player = ZXF.player;
-        var game = ZXF.game;
-        var W = ZXF.CANVAS_W;
-        var opponentDead = !pk.opponent.alive || pk.opponent.finished;
-
-        // 对手已死亡，只显示一个半透明标记，不画影子
-        if (opponentDead) {
-            var markX = Math.max(80, Math.min(W - 80, player.x + player.standW / 2));
-            ctx.globalAlpha = 0.6;
-            ctx.fillStyle = "#ef4444";
-            ctx.font = "bold 13px sans-serif";
-            ctx.textAlign = "center";
-            ctx.fillText("💀 " + (pk.opponentNickname || "对手") + " 已阵亡", markX, ZXF.GROUND_Y - 60);
-            ctx.globalAlpha = 1;
-            ctx.textAlign = "start";
-            return;
-        }
-
-        // 将对手的 distance 映射为视觉 x 偏移
-        var distDelta = (pk.opponent.distance - game.distance) * 0.5;
-        var ghostX = player.x + distDelta;
-        var ghostY = player.y - 32;
-
-        // 限制在画布内
-        ghostX = Math.max(20, Math.min(W - 140, ghostX));
-
-        // 半透明对手
-        ctx.globalAlpha = 0.4;
-        var img = ZXF.images.runner;
-        if (img && img.complete && img.naturalWidth) {
-            ctx.drawImage(img, ghostX, ghostY, player.standW, player.standH);
-        } else {
-            ctx.fillStyle = "#94a3b8";
-            ctx.fillRect(ghostX, ghostY, player.standW, player.standH);
-        }
-
-        // 对手昵称标签
-        ctx.globalAlpha = 0.75;
-        ctx.fillStyle = "#22c55e";
-        ctx.font = "bold 11px sans-serif";
-        ctx.textAlign = "center";
-        var labelX = ghostX + player.standW / 2;
-        ctx.fillText(pk.opponentNickname || "对手", labelX, ghostY - 6);
-
-        // 分差指示
-        var diff = game.score - pk.opponent.score;
-        var diffText = (diff > 0 ? "+" : "") + diff;
-        ctx.fillStyle = diff > 0 ? "#4ade80" : diff < 0 ? "#ef4444" : "#facc15";
-        ctx.font = "bold 10px 'JetBrains Mono', monospace";
-        ctx.fillText(diffText, labelX, ghostY - 18);
-
-        ctx.globalAlpha = 1;
-        ctx.textAlign = "start";
-    }
-
     ZXF.drawFrame = function (dt) {
         ctx = ZXF.ctx;
         if (!ctx) return;
         drawBackground();
         drawDust(dt);
         drawObstacles();
-        drawOpponentGhost();
         drawPlayer();
     };
 })();

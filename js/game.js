@@ -364,67 +364,53 @@
     // ========== 主更新循环 ==========
     // ========== PK 辅助函数 ==========
 
-    // PK 同步：POST 自己进度 + GET 对手进度
-    ZXF.pk.syncPKUpdate = function () {
-        var game = ZXF.game;
-        var pk = ZXF.pk;
+    // 死亡后轮询对手结果（每 2s 一次，最多 120s）
+    var _pkPollTimer = null;
+    var _pkPollCount = 0;
+    var _pkMaxPollCount = 60;
 
-        if (!ZXF.api) return;
+    ZXF.pk.startDeathPolling = function () {
+        _pkPollCount = 0;
+        if (_pkPollTimer) clearInterval(_pkPollTimer);
 
-        var progress = {
-            score: game.score,
-            distance: game.distance,
-            speed: game.speed,
-            alive: !pk.selfFinished,
-            finished: pk.selfFinished
-        };
+        _pkPollTimer = setInterval(function () {
+            _pkPollCount++;
+            var pk = ZXF.pk;
+            if (!ZXF.api || !pk.matchId) return;
 
-        ZXF.api.syncPKProgress(ZXF.userId, pk.matchId, progress).then(function () {
-            // POST 成功后再 GET 对手进度
-            return ZXF.api.getOpponentProgress(pk.matchId, ZXF.userId);
-        }).then(function (data) {
-            if (data && !data.error) {
-                pk.opponent.score = data.opponentScore || 0;
-                pk.opponent.distance = data.opponentDistance || 0;
-                pk.opponent.alive = data.opponentAlive !== false;
-                pk.opponent.finished = data.opponentFinished === true;
-                pk.opponent.lastUpdate = Date.now();
+            ZXF.api.getOpponentProgress(pk.matchId, ZXF.userId).then(function (data) {
+                if (data && !data.error) {
+                    pk.opponent.score = data.opponentScore || 0;
+                    pk.opponent.distance = data.opponentDistance || 0;
+                    pk.opponent.alive = data.opponentAlive !== false;
+                    pk.opponent.finished = data.opponentFinished === true;
 
-                // 如果对手已结束且自己还活着，标记我们领先
-                if (pk.opponent.finished && !pk.selfFinished) {
-                    // 继续跑，等自己死了再结算
+                    // 对手也结束了 → 结算
+                    if (pk.opponent.finished || !pk.opponent.alive) {
+                        ZXF.pk.finalizePKMatch();
+                    }
                 }
+            }).catch(function () {});
 
-                // 拿到最新对手数据后立即检查是否双方都已结束
-                ZXF.pk.checkPKResult();
+            // 超时（120s）强制结算
+            if (_pkPollCount >= _pkMaxPollCount) {
+                ZXF.pk.finalizePKMatch();
             }
-        }).catch(function () {
-            // 网络错误，忽略本次同步
-        });
+        }, 2000);
     };
 
-    // 检查 PK 是否双方都已结束
-    ZXF.pk.checkPKResult = function () {
-        var pk = ZXF.pk;
-        if (!pk.selfFinished) return;
-
-        // 对手数据超时（超过 15s 无更新），强制结算
-        var opponentStale = Date.now() - pk.opponent.lastUpdate > 15000;
-        if (opponentStale) {
-            ZXF.pk.finalizePKMatch();
-            return;
+    ZXF.pk.stopDeathPolling = function () {
+        if (_pkPollTimer) {
+            clearInterval(_pkPollTimer);
+            _pkPollTimer = null;
         }
-
-        // 对手已结束（finished 或 !alive）→ 结算
-        if (pk.opponent.finished || !pk.opponent.alive) {
-            ZXF.pk.finalizePKMatch();
-        }
-        // 否则对手还在跑，继续等待
     };
 
     // PK 结算
     ZXF.pk.finalizePKMatch = function () {
         var pk = ZXF.pk;
+        ZXF.pk.stopDeathPolling();
+
         var myDistance = ZXF.game.distance;
         var oppDistance = pk.opponent.distance;
         var myScore = ZXF.game.score;
@@ -447,10 +433,26 @@
             ZXF.api.submitScore(ZXF.userId, myScore, ZXF.modifiers.speedMult !== 1 || ZXF.modifiers.densityMult !== 1 || ZXF.modifiers.invincible);
         }
 
-        // 显示 PK 结果 UI（传入双方距离）
+        // 显示 PK 结果 UI
         if (ZXF.showPKResult) {
             ZXF.showPKResult(pk.result, myScore, oppScore, pk.opponentNickname, myDistance, oppDistance);
         }
+    };
+
+    // 强制退出 PK（等待中点击按钮）
+    ZXF.pk.forceQuitPK = function () {
+        ZXF.pk.stopDeathPolling();
+        // 确保服务器收到自己的死亡数据
+        if (ZXF.api && ZXF.userId && ZXF.pk.matchId) {
+            ZXF.api.syncPKProgress(ZXF.userId, ZXF.pk.matchId, {
+                score: ZXF.game.score,
+                distance: ZXF.game.distance,
+                speed: ZXF.game.speed,
+                alive: false,
+                finished: true
+            }).catch(function () {});
+        }
+        if (ZXF.resetToSoloMode) ZXF.resetToSoloMode();
     };
 
     // 玩家在 PK 中死亡
@@ -458,7 +460,7 @@
         var pk = ZXF.pk;
         pk.selfFinished = true;
 
-        // 发送最终同步
+        // 发送最终结果到服务器
         if (ZXF.api) {
             ZXF.api.syncPKProgress(ZXF.userId, pk.matchId, {
                 score: ZXF.game.score,
@@ -469,7 +471,10 @@
             }).catch(function () {});
         }
 
-        // 继续游戏循环等待对手
+        // 开始轮询对手结果
+        ZXF.pk.startDeathPolling();
+
+        // 继续渲染循环（保持画面）
         ZXF.phase = "playing";
         ZXF.updateScoreDisplay();
 
@@ -487,13 +492,14 @@
         ZXF.modifiers.invincible = false;
         pk.mode = "racing";
         pk.selfFinished = false;
-        pk.syncTimer = 0;
         pk.result = null;
         pk.opponent.score = 0;
         pk.opponent.distance = 0;
         pk.opponent.alive = true;
         pk.opponent.finished = false;
-        pk.opponent.lastUpdate = Date.now();
+
+        // 停止任何残留轮询
+        ZXF.pk.stopDeathPolling();
 
         // 隐藏所有可能阻挡的弹窗
         ZXF.dom.overlay.classList.add("hidden");
@@ -504,7 +510,6 @@
         for (var i = 0; i < els.length; i++) {
             els[i].classList.add("hidden");
         }
-        // 确保 countdownOverlay 也隐藏
         var cdOv = document.getElementById("countdownOverlay");
         if (cdOv) cdOv.classList.add("hidden");
 
@@ -514,7 +519,6 @@
 
         if (ZXF.playBgm) ZXF.playBgm();
 
-        // 先渲染一帧，再启动循环
         ZXF.drawFrame(0);
         requestAnimationFrame(ZXF.loop);
     };
@@ -525,25 +529,15 @@
         var input = ZXF.input;
         var groundY = ZXF.GROUND_Y;
 
-        // PK 模式下自己已死亡，跳过物理但仍更新障碍物和同步
+        // PK 模式下自己已死亡，跳过物理但仍更新障碍物（保持画面滚动）
         if (ZXF.pk.selfFinished) {
-            // 仅更新障碍物位置（保持画面滚动）
             for (var i = 0; i < game.obstacles.length; i++) {
                 game.obstacles[i].x -= game.speed * (game.obstacles[i].speedMultiplier || 1) * dt;
             }
             game.obstacles = game.obstacles.filter(function (obs) {
                 return obs.x + obs.w > -40;
             });
-
-            // PK 同步
-            ZXF.pk.syncTimer += dt;
-            if (ZXF.pk.syncTimer >= ZXF.pk.syncInterval) {
-                ZXF.pk.syncTimer = 0;
-                ZXF.pk.syncPKUpdate();
-            }
-
-            // 检查对手是否也结束了
-            ZXF.pk.checkPKResult();
+            // 轮询由 endPKGame 中启动的 setInterval 处理
             return;
         }
 
@@ -612,13 +606,5 @@
             }
         }
 
-        // PK 同步（仅在 racing 模式下）
-        if (ZXF.pk.mode === "racing") {
-            ZXF.pk.syncTimer += dt;
-            if (ZXF.pk.syncTimer >= ZXF.pk.syncInterval) {
-                ZXF.pk.syncTimer = 0;
-                ZXF.pk.syncPKUpdate();
-            }
-        }
     };
 })();
