@@ -1,7 +1,7 @@
 const cors = require('../_lib/cors');
 const { getKv } = require('../_lib/kv');
 
-const MAX_MESSAGES = 100;       // 每个对话最多保留 100 条消息
+const MAX_MESSAGES = 10;       // 每个对话最多保留 10 条消息
 const MESSAGE_TTL = 86400 * 7;  // 7 天过期
 
 function convKey(uid1, uid2) {
