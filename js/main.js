@@ -231,10 +231,25 @@
                 : "#" + entry.rank;
             return "<li class=\"" + rowClass + "\" data-user-id=\"" + entry.userId + "\" data-nickname=\"" + escapeHtml(entry.nickname) + "\" data-score=\"" + entry.score + "\">" +
                    "<span class=\"lb-rank\">" + rankIcon + "</span>" +
+                   "<span class=\"lb-dot\" data-uid=\"" + entry.userId + "\"></span>" +
                    "<span class=\"lb-nickname\">" + escapeHtml(entry.nickname) + "</span>" +
                    "<span class=\"lb-score\">" + String(entry.score).padStart(5, "0") + "</span>" +
                    "</li>";
         }).join("");
+
+        // 批量查询在线状态
+        var userIds = entries.map(function (e) { return e.userId; });
+        if (userIds.length > 0 && ZXF.api) {
+            ZXF.api.getOnlineStatus(userIds).then(function (data) {
+                if (data && data.online) {
+                    var dots = list.querySelectorAll(".lb-dot");
+                    for (var d = 0; d < dots.length; d++) {
+                        var uid = dots[d].getAttribute("data-uid");
+                        dots[d].className = "lb-dot " + (data.online[uid] ? "online" : "");
+                    }
+                }
+            }).catch(function () {});
+        }
 
         // 绑定点击 → 弹出玩家资料
         var rows = list.querySelectorAll(".lb-row");
