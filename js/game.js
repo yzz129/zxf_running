@@ -488,18 +488,24 @@
 
         // 隐藏所有可能阻挡的弹窗
         ZXF.dom.overlay.classList.add("hidden");
-        var overlays = document.querySelectorAll(".pk-result-overlay, .pk-matchmaking-overlay, .pk-match-found-overlay, .chat-modal, .player-popup, .profile-modal, .settings-modal, .help-modal");
-        for (var i = 0; i < overlays.length; i++) {
-            overlays[i].classList.add("hidden");
+        var els = document.querySelectorAll(
+            ".pk-result-overlay,.pk-matchmaking-overlay,.pk-match-found-overlay," +
+            ".pk-waiting-overlay,.chat-modal,.player-popup,.profile-modal,.settings-modal,.help-modal"
+        );
+        for (var i = 0; i < els.length; i++) {
+            els[i].classList.add("hidden");
         }
+        // 确保 countdownOverlay 也隐藏
+        var cdOv = document.getElementById("countdownOverlay");
+        if (cdOv) cdOv.classList.add("hidden");
 
         ZXF.resetGame();
         ZXF.phase = "playing";
-        if (ZXF.playBgm) ZXF.playBgm();
         ZXF.lastTime = performance.now();
 
-        // 确保游戏循环启动
-        ctx = ZXF.ctx;
+        if (ZXF.playBgm) ZXF.playBgm();
+
+        // 先渲染一帧，再启动循环
         ZXF.drawFrame(0);
         requestAnimationFrame(ZXF.loop);
     };

@@ -425,10 +425,9 @@
 
     ZXF.startPKCountdown = function () {
         ZXF.pk.mode = "countdown";
-        var overlay = document.getElementById("pkMatchmakingOverlay");
-        if (overlay) overlay.classList.add("hidden");
 
-        // 显示匹配成功信息
+        // 隐藏所有弹窗
+        ZXF.dom.overlay.classList.add("hidden");
         var matchFoundOverlay = document.getElementById("pkMatchFoundOverlay");
         var matchFoundText = document.getElementById("pkMatchFoundText");
         if (matchFoundOverlay && matchFoundText) {
@@ -436,14 +435,45 @@
             matchFoundOverlay.classList.remove("hidden");
         }
 
-        // 隐藏普通 overlay
-        ZXF.dom.overlay.classList.add("hidden");
-
-        // 使用游戏内倒计时
-        ZXF.startCountdown(function () {
+        // 用 countdownOverlay 显示倒计时
+        var cdOverlay = document.getElementById("countdownOverlay");
+        var cdText = document.getElementById("countdownText");
+        if (!cdOverlay || !cdText) {
+            // 没有倒计时元素，直接开跑
             if (matchFoundOverlay) matchFoundOverlay.classList.add("hidden");
             ZXF.pk.startPKRace();
-        });
+            return;
+        }
+
+        // 阻止可能干扰的状态
+        ZXF.pk.mode = "countdown";
+        ZXF.phase = "countdown";
+        cdOverlay.classList.remove("hidden");
+
+        var count = 3;
+        function tick() {
+            if (count > 0) {
+                cdText.textContent = count;
+                cdText.style.animation = "none";
+                void cdText.offsetWidth;
+                cdText.style.animation = "countBounce 0.6s ease";
+                count--;
+                setTimeout(tick, 900);
+            } else {
+                cdText.textContent = "GO!";
+                cdText.style.animation = "none";
+                void cdText.offsetWidth;
+                cdText.style.animation = "countBounce 0.6s ease";
+                setTimeout(function () {
+                    cdOverlay.classList.add("hidden");
+                    cdText.textContent = "3";
+                    if (matchFoundOverlay) matchFoundOverlay.classList.add("hidden");
+                    // 直接启动 PK，不依赖 savedPhase
+                    ZXF.pk.startPKRace();
+                }, 600);
+            }
+        }
+        tick();
     };
 
     ZXF.showPKResult = function (result, myScore, oppScore, oppName, myDistance, oppDistance) {
