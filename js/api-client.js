@@ -132,23 +132,6 @@
       return ZXF.api._post('/api/friends/list', { userId: userId, friendUserId: friendUserId });
     },
 
-    // ========== 好友请求 ==========
-    getFriendRequests: async function (userId) {
-      return ZXF.api._get('/api/friends/request?userId=' + encodeURIComponent(userId));
-    },
-
-    sendFriendRequest: async function (userId, friendUserId) {
-      return ZXF.api._post('/api/friends/request', { userId: userId, friendUserId: friendUserId, action: 'send' });
-    },
-
-    acceptFriendRequest: async function (userId, friendUserId) {
-      return ZXF.api._post('/api/friends/request', { userId: userId, friendUserId: friendUserId, action: 'accept' });
-    },
-
-    declineFriendRequest: async function (userId, friendUserId) {
-      return ZXF.api._post('/api/friends/request', { userId: userId, friendUserId: friendUserId, action: 'decline' });
-    },
-
     // ========== 在线状态 ==========
     heartbeat: async function (userId) {
       return ZXF.api._post('/api/friends/online', { userId: userId });
@@ -156,21 +139,6 @@
 
     getOnlineStatus: async function (friendIds) {
       return ZXF.api._get('/api/friends/online?ids=' + encodeURIComponent(friendIds.join(',')));
-    },
-
-    // ========== 好友聊天 ==========
-    getChatMessages: async function (userId, friendId) {
-      return ZXF.api._get('/api/friends/chat?userId=' + encodeURIComponent(userId) +
-        '&friendId=' + encodeURIComponent(friendId));
-    },
-
-    sendChatMessage: async function (userId, friendId, text, type) {
-      return ZXF.api._post('/api/friends/chat', {
-        userId: userId,
-        friendId: friendId,
-        text: text,
-        type: type || 'chat'
-      });
     },
 
     // ========== PK 同步 ==========

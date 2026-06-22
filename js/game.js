@@ -516,7 +516,7 @@
         ZXF.dom.overlay.classList.add("hidden");
         var els = document.querySelectorAll(
             ".pk-result-overlay,.pk-matchmaking-overlay,.pk-match-found-overlay," +
-            ".pk-waiting-overlay,.chat-modal,.player-popup,.profile-modal,.settings-modal,.help-modal"
+            ".pk-waiting-overlay,.player-popup,.profile-modal,.settings-modal,.help-modal"
         );
         for (var i = 0; i < els.length; i++) {
             els[i].classList.add("hidden");

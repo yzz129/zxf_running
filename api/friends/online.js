@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
             res.end(JSON.stringify({ error: 'missing_userId' }));
             return;
           }
-          await kv.set('online:' + userId, '1', { ex: 30 });
+          await kv.set('online:' + userId, '1', { ex: 45 });
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ ok: true }));
