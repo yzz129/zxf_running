@@ -1,0 +1,15 @@
+{
+  "name": "zxf-running",
+  "version": "2.0.0",
+  "description": "张雪峰快跑 - 在线PK无尽跑酷游戏",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.0"
+  },
+  "devDependencies": {
+    "vercel": "^34.0.0"
+  }
+}

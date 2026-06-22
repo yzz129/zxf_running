@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>张雪峰快跑</title>
+    <link rel="preload" href="css/styles.css" as="style">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="page-shell">
+        <!-- 游戏修改器面板 -->
+        <div class="modifier-panel" id="modifierPanel">
+            <div class="panel-header" id="modifierToggle">
+                <span class="panel-title">游戏修改器</span>
+                <span class="toggle-arrow">▼</span>
+            </div>
+            <div class="panel-body" id="modifierBody">
+                <div class="modifier-row">
+                    <label class="modifier-label">速度倍率</label>
+                    <div class="modifier-options" data-key="speedMult">
+                        <button class="mod-option" data-value="0.5">0.5x</button>
+                        <button class="mod-option active" data-value="1">1x</button>
+                        <button class="mod-option" data-value="1.5">1.5x</button>
+                        <button class="mod-option" data-value="2">2x</button>
+                    </div>
+                </div>
+                <div class="modifier-row">
+                    <label class="modifier-label">障碍密度</label>
+                    <div class="modifier-options" data-key="densityMult">
+                        <button class="mod-option" data-value="0.5">稀疏</button>
+                        <button class="mod-option active" data-value="1">正常</button>
+                        <button class="mod-option" data-value="1.5">密集</button>
+                    </div>
+                </div>
+                <div class="modifier-row">
+                    <label class="modifier-label">无敌模式</label>
+                    <label class="switch">
+                        <input type="checkbox" id="invincibleToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <main class="game-shell" aria-label="张雪峰快跑">
+            <div class="hud" aria-live="polite">
+                <div class="hud-left">
+                    <button id="settingsButton" class="settings-button" type="button" aria-label="设置">⚙</button>
+                    <div class="hud-title">张雪峰快跑</div>
+                    <span id="nicknameDisplay" class="nickname-display"></span>
+                </div>
+                <div class="hud-right">
+                    <div class="score-wrap">
+                        <span id="score">00000</span>
+                        <span id="best">BEST 00000</span>
+                    </div>
+                    <span id="pkHudInfo" class="pk-hud-info hidden"></span>
+                    <button id="pkButton" class="pk-button" type="button" aria-label="PK对战">PK对战</button>
+                    <button id="helpButton" class="help-button" type="button" aria-label="游戏说明">?</button>
+                </div>
+            </div>
+            <canvas id="game" width="1024" height="576"></canvas>
+
+            <!-- 倒计时层 -->
+            <div id="countdownOverlay" class="countdown-overlay hidden">
+                <span id="countdownText" class="countdown-text">3</span>
+            </div>
+
+            <div id="overlay" class="overlay">
+                <h1>张雪峰快跑</h1>
+                <p id="overlayText">长按跳更高，按 ↓ 下蹲躲避雪碧<br>点击按钮或按空格开始游戏</p>
+                <button id="startButton" type="button">开始游戏</button>
+            </div>
+
+            <!-- 设置面板 -->
+            <div id="settingsModal" class="settings-modal hidden">
+                <div class="settings-backdrop"></div>
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <span class="settings-card-title">游戏设置</span>
+                        <span class="settings-pause-badge" id="pauseBadge">已暂停</span>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="settings-section">
+                            <h3>音效设置</h3>
+                            <div class="settings-row">
+                                <span>背景音乐</span>
+                                <div class="volume-control">
+                                    <input type="range" id="bgmVolume" min="0" max="100" value="50">
+                                    <span class="volume-value" id="bgmVolumeLabel">50%</span>
+                                </div>
+                            </div>
+                            <div class="settings-row">
+                                <span>音效</span>
+                                <div class="volume-control">
+                                    <input type="range" id="sfxVolume" min="0" max="100" value="90">
+                                    <span class="volume-value" id="sfxVolumeLabel">90%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="settings-actions">
+                            <button id="restartButton" class="settings-btn restart-btn" type="button">重新开始</button>
+                            <button id="resumeButton" class="settings-btn resume-btn" type="button">继续游戏</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 帮助弹窗 -->
+            <div id="helpModal" class="help-modal hidden">
+                <div class="help-backdrop"></div>
+                <div class="help-card">
+                    <div class="help-card-header">
+                        <span class="help-card-title">游戏玩法</span>
+                        <button id="helpClose" class="help-close" type="button">&times;</button>
+                    </div>
+                    <div class="help-card-body">
+                        <div class="help-section">
+                            <h3>操作方式</h3>
+                            <p>跳跃：<kbd>空格</kbd> / <kbd>↑</kbd> / 点击屏幕 / 点击"跳跃"按钮</p>
+                            <p>下蹲：<kbd>↓</kbd> / 点击"下蹲"按钮</p>
+                            <p>长按跳跃键可以跳得更高</p>
+                            <p>空中下蹲可快速落地</p>
+                        </div>
+                        <div class="help-section">
+                            <h3>障碍物说明</h3>
+                            <p>巧乐兹：必须跳跃躲避</p>
+                            <p>雪碧瓶：根据高度下蹲或跳跃躲避</p>
+                        </div>
+                        <div class="help-section">
+                            <h3>游戏规则</h3>
+                            <p>随着奔跑距离增加，速度会越来越快</p>
+                            <p>碰到障碍物则游戏结束</p>
+                            <p>顶部修改器可调节速度和障碍密度</p>
+                            <p>无敌模式下不会死亡</p>
+                            <p>点击"PK对战"可与其他玩家实时竞速</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PK 匹配等待弹窗 -->
+            <div id="pkMatchmakingOverlay" class="pk-matchmaking-overlay hidden">
+                <div class="pk-matching-card">
+                    <div class="pk-spinner"></div>
+                    <p id="pkMatchmakingText">正在匹配对手...</p>
+                    <button id="pkCancelButton" class="pk-cancel-btn" type="button">取消匹配</button>
+                </div>
+            </div>
+
+            <!-- PK 找到对手弹窗 -->
+            <div id="pkMatchFoundOverlay" class="pk-match-found-overlay hidden">
+                <div class="pk-match-found-card">
+                    <p id="pkMatchFoundText">找到对手!</p>
+                </div>
+            </div>
+
+            <!-- PK 比赛结果弹窗 -->
+            <div id="pkResultOverlay" class="pk-result-overlay hidden">
+                <div class="pk-result-card">
+                    <h2 id="pkResultTitle"></h2>
+                    <p id="pkResultDetail"></p>
+                    <button id="pkResultClose" class="settings-btn resume-btn" type="button">返回</button>
+                </div>
+            </div>
+        </main>
+
+        <div class="mobile-controls" aria-label="移动端控制">
+            <button id="jumpButton" class="control-button jump-button" type="button">跳跃</button>
+            <button id="duckButton" class="control-button duck-button" type="button">下蹲</button>
+        </div>
+
+        <p class="footer-link">
+            <a href="#" id="douyinLink">欢迎关注小Y</a>
+        </p>
+
+        <!-- 抖音二维码弹窗 -->
+        <div id="douyinModal" class="douyin-modal hidden">
+            <div class="douyin-backdrop"></div>
+            <div class="douyin-card">
+                <img src="assets/douyin.png" alt="抖音二维码">
+                <button id="douyinClose" class="douyin-close" type="button">&times;</button>
+            </div>
+        </div>
+
+        <!-- 全球排行榜面板 -->
+        <div class="leaderboard-panel" id="leaderboardPanel">
+            <div class="panel-header" id="leaderboardToggle">
+                <span class="panel-title">全球排行榜</span>
+                <span class="history-count" id="lbCount">0</span>
+                <button id="refreshLeaderboard" class="refresh-btn" type="button" aria-label="刷新">↻</button>
+                <span class="toggle-arrow">▶</span>
+            </div>
+            <div class="panel-body hidden" id="leaderboardBody">
+                <div class="leaderboard-tabs">
+                    <button class="lb-tab active" data-pure="true" type="button">纯净榜</button>
+                    <button class="lb-tab" data-pure="false" type="button">全部</button>
+                </div>
+                <ol id="leaderboardList" class="leaderboard-list"></ol>
+            </div>
+        </div>
+
+        <!-- 本地得分记录（折叠保留） -->
+        <div class="score-history" id="scoreHistory">
+            <div class="panel-header" id="historyToggle">
+                <span class="panel-title">本地记录</span>
+                <span class="history-count" id="historyCount">0</span>
+                <span class="toggle-arrow">▶</span>
+            </div>
+            <div class="panel-body hidden" id="historyBody">
+                <ol id="historyList" class="history-list"></ol>
+                <button id="clearHistory" class="clear-history-btn">清除记录</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js" defer></script>
+    <script src="js/game.js" defer></script>
+    <script src="js/renderer.js" defer></script>
+    <script src="js/input.js" defer></script>
+    <script src="js/api-client.js" defer></script>
+    <script src="js/main.js" defer></script>
+</body>
+</html>
