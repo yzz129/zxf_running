@@ -132,6 +132,23 @@
       return ZXF.api._post('/api/friends/list', { userId: userId, friendUserId: friendUserId });
     },
 
+    // ========== 好友请求 ==========
+    getFriendRequests: async function (userId) {
+      return ZXF.api._get('/api/friends/request?userId=' + encodeURIComponent(userId));
+    },
+
+    sendFriendRequest: async function (userId, friendUserId) {
+      return ZXF.api._post('/api/friends/request', { userId: userId, friendUserId: friendUserId, action: 'send' });
+    },
+
+    acceptFriendRequest: async function (userId, friendUserId) {
+      return ZXF.api._post('/api/friends/request', { userId: userId, friendUserId: friendUserId, action: 'accept' });
+    },
+
+    declineFriendRequest: async function (userId, friendUserId) {
+      return ZXF.api._post('/api/friends/request', { userId: userId, friendUserId: friendUserId, action: 'decline' });
+    },
+
     // ========== 在线状态 ==========
     heartbeat: async function (userId) {
       return ZXF.api._post('/api/friends/online', { userId: userId });

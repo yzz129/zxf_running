@@ -231,6 +231,22 @@
             <button id="duckButton" class="control-button duck-button" type="button">下蹲</button>
         </div>
 
+        <!-- 排行榜玩家弹窗 -->
+        <div id="playerPopup" class="player-popup hidden">
+            <div class="player-popup-backdrop"></div>
+            <div class="player-popup-card">
+                <div class="player-popup-header">
+                    <span id="popupNickname" class="popup-nickname"></span>
+                    <button id="popupClose" class="popup-close-btn" type="button">&times;</button>
+                </div>
+                <div class="player-popup-body">
+                    <p>最佳成绩: <strong id="popupBestScore">0</strong></p>
+                    <button id="popupAddFriend" class="popup-add-friend-btn" type="button">🤝 发送好友请求</button>
+                    <p id="popupMsg" class="popup-msg hidden"></p>
+                </div>
+            </div>
+        </div>
+
         <p class="footer-link">
             <a href="#" id="douyinLink">欢迎关注小Y</a>
         </p>
@@ -252,6 +268,10 @@
                 <span class="toggle-arrow">▶</span>
             </div>
             <div class="panel-body hidden" id="friendsBody">
+                <div id="friendRequestsSection" class="friend-requests-section hidden">
+                    <div class="requests-header">好友请求 <span id="requestsCount" class="requests-count">0</span></div>
+                    <div id="friendRequestsList" class="requests-list"></div>
+                </div>
                 <div id="sidebarFriendsList" class="sidebar-friends-list">
                     <p class="friends-empty">暂无好友</p>
                 </div>

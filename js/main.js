@@ -229,12 +229,92 @@
             var rankIcon = entry.rank <= 3
                 ? ["🥇", "🥈", "🥉"][entry.rank - 1]
                 : "#" + entry.rank;
-            return "<li class=\"" + rowClass + "\">" +
+            return "<li class=\"" + rowClass + "\" data-user-id=\"" + entry.userId + "\" data-nickname=\"" + escapeHtml(entry.nickname) + "\" data-score=\"" + entry.score + "\">" +
                    "<span class=\"lb-rank\">" + rankIcon + "</span>" +
                    "<span class=\"lb-nickname\">" + escapeHtml(entry.nickname) + "</span>" +
                    "<span class=\"lb-score\">" + String(entry.score).padStart(5, "0") + "</span>" +
                    "</li>";
         }).join("");
+
+        // 绑定点击 → 弹出玩家资料
+        var rows = list.querySelectorAll(".lb-row");
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].addEventListener("click", function () {
+                var uid = this.getAttribute("data-user-id");
+                var nick = this.getAttribute("data-nickname");
+                var score = this.getAttribute("data-score");
+                if (uid && uid !== ZXF.userId) {
+                    showPlayerPopup(uid, nick, score);
+                }
+            });
+        }
+    }
+
+    // ========== 排行榜玩家弹窗 ==========
+    function initPlayerPopup() {
+        var popup = document.getElementById("playerPopup");
+        var backdrop = popup ? popup.querySelector(".player-popup-backdrop") : null;
+        var closeBtn = document.getElementById("popupClose");
+        var addBtn = document.getElementById("popupAddFriend");
+
+        if (!popup) return;
+
+        function closePopup() {
+            popup.classList.add("hidden");
+            var msg = document.getElementById("popupMsg");
+            if (msg) { msg.classList.add("hidden"); msg.textContent = ""; }
+        }
+
+        if (backdrop) backdrop.addEventListener("click", function (e) { e.stopPropagation(); closePopup(); });
+        if (closeBtn) closeBtn.addEventListener("click", function (e) { e.stopPropagation(); closePopup(); });
+        popup.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+
+        if (addBtn) {
+            addBtn.addEventListener("click", function () {
+                var targetId = addBtn.getAttribute("data-target-id");
+                if (!targetId || !ZXF.api || !ZXF.userId) return;
+                ZXF.api.sendFriendRequest(ZXF.userId, targetId).then(function (result) {
+                    var msg = document.getElementById("popupMsg");
+                    if (!msg) return;
+                    msg.classList.remove("hidden");
+                    if (result && result.status === "sent") {
+                        msg.textContent = "已发送好友请求，等待对方同意";
+                        msg.className = "popup-msg success";
+                        addBtn.disabled = true;
+                        addBtn.textContent = "已发送";
+                    } else if (result && result.status === "already_sent") {
+                        msg.textContent = "已发送过请求，请耐心等待";
+                        msg.className = "popup-msg error";
+                    } else if (result && result.status === "already_friends") {
+                        msg.textContent = "你们已经是好友了";
+                        msg.className = "popup-msg success";
+                    } else {
+                        msg.textContent = "发送失败，请稍后重试";
+                        msg.className = "popup-msg error";
+                    }
+                }).catch(function () {});
+            });
+        }
+    }
+
+    function showPlayerPopup(userId, nickname, score) {
+        var popup = document.getElementById("playerPopup");
+        var nickEl = document.getElementById("popupNickname");
+        var scoreEl = document.getElementById("popupBestScore");
+        var addBtn = document.getElementById("popupAddFriend");
+        var msg = document.getElementById("popupMsg");
+        if (!popup) return;
+
+        if (nickEl) nickEl.textContent = nickname;
+        if (scoreEl) scoreEl.textContent = String(score).padStart(5, "0");
+        if (addBtn) {
+            addBtn.setAttribute("data-target-id", userId);
+            addBtn.disabled = false;
+            addBtn.textContent = "🤝 发送好友请求";
+        }
+        if (msg) { msg.classList.add("hidden"); msg.textContent = ""; }
+
+        popup.classList.remove("hidden");
     }
 
     function escapeHtml(str) {
@@ -721,9 +801,18 @@
         var countEl = document.getElementById("friendsOnlineCount");
         if (!container || !ZXF.api || !ZXF.userId) return;
 
-        ZXF.api.getFriendsList(ZXF.userId).then(function (data) {
+        // 同时加载好友列表和待处理请求
+        Promise.all([
+            ZXF.api.getFriendsList(ZXF.userId),
+            ZXF.api.getFriendRequests(ZXF.userId)
+        ]).then(function (results) {
+            var data = results[0];
+            var reqData = results[1];
             if (!data || !data.friends) return;
             ZXF.friends = data.friends;
+
+            // 渲染好友请求
+            renderFriendRequests(reqData ? reqData.requests : []);
 
             var onlineCount = 0;
             if (data.friends.length === 0) {
@@ -780,6 +869,58 @@
         }).catch(function () {});
     }
 
+    // ========== 好友请求渲染 ==========
+    function renderFriendRequests(requests) {
+        var section = document.getElementById("friendRequestsSection");
+        var countEl = document.getElementById("requestsCount");
+        var list = document.getElementById("friendRequestsList");
+        if (!section || !list) return;
+
+        if (!requests || requests.length === 0) {
+            section.classList.add("hidden");
+            if (countEl) countEl.textContent = "0";
+            list.innerHTML = "";
+            return;
+        }
+
+        section.classList.remove("hidden");
+        if (countEl) countEl.textContent = String(requests.length);
+
+        list.innerHTML = requests.map(function (req) {
+            return "<div class=\"request-row\">" +
+                   "<span class=\"req-nickname\">" + escapeHtml(req.fromNickname || "unknown") + "</span>" +
+                   "<button class=\"req-accept-btn\" data-from-id=\"" + req.from + "\">✓</button>" +
+                   "<button class=\"req-decline-btn\" data-from-id=\"" + req.from + "\">✕</button>" +
+                   "</div>";
+        }).join("");
+
+        // 接受按钮
+        var acceptBtns = list.querySelectorAll(".req-accept-btn");
+        for (var a = 0; a < acceptBtns.length; a++) {
+            acceptBtns[a].addEventListener("click", function (e) {
+                e.stopPropagation();
+                var fromId = this.getAttribute("data-from-id");
+                if (!ZXF.api || !ZXF.userId) return;
+                ZXF.api.acceptFriendRequest(ZXF.userId, fromId).then(function () {
+                    renderFriendsSidebar();
+                }).catch(function () {});
+            });
+        }
+
+        // 拒绝按钮
+        var declineBtns = list.querySelectorAll(".req-decline-btn");
+        for (var d = 0; d < declineBtns.length; d++) {
+            declineBtns[d].addEventListener("click", function (e) {
+                e.stopPropagation();
+                var fromId = this.getAttribute("data-from-id");
+                if (!ZXF.api || !ZXF.userId) return;
+                ZXF.api.declineFriendRequest(ZXF.userId, fromId).then(function () {
+                    renderFriendsSidebar();
+                }).catch(function () {});
+            });
+        }
+    }
+
     // ========== 在线状态轮询 ==========
     function startOnlinePolling() {
         if (onlinePollTimer) return;
@@ -798,16 +939,23 @@
     }
 
     function fetchOnlineStatus() {
-        if (!ZXF.api || !ZXF.userId || ZXF.friends.length === 0) return;
+        if (!ZXF.api || !ZXF.userId) return;
+
+        // 同时获取在线状态和好友请求
         var ids = ZXF.friends.map(function (f) { return f.userId; });
-        ZXF.api.getOnlineStatus(ids).then(function (data) {
-            if (data && data.online) {
-                friendsOnlineMap = data.online;
-                // 更新侧边栏在线状态圆点
-                updateOnlineDots();
-                // 更新聊天在线徽章
-                updateChatOnlineBadge();
-            }
+        if (ids.length > 0) {
+            ZXF.api.getOnlineStatus(ids).then(function (data) {
+                if (data && data.online) {
+                    friendsOnlineMap = data.online;
+                    updateOnlineDots();
+                    updateChatOnlineBadge();
+                }
+            }).catch(function () {});
+        }
+
+        // 检查好友请求
+        ZXF.api.getFriendRequests(ZXF.userId).then(function (data) {
+            if (data) renderFriendRequests(data.requests);
         }).catch(function () {});
     }
 
@@ -1111,16 +1259,21 @@
                 if (!input || !msg || !ZXF.api || !ZXF.userId) return;
                 var friendId = input.value.trim();
                 if (!friendId) return;
-                ZXF.api.addFriend(ZXF.userId, friendId).then(function (result) {
+                ZXF.api.sendFriendRequest(ZXF.userId, friendId).then(function (result) {
                     msg.classList.remove("hidden");
-                    if (result && !result.error) {
-                        msg.textContent = "已添加好友: " + (result.friend ? result.friend.nickname : friendId);
+                    if (result && result.status === "sent") {
+                        msg.textContent = "已发送好友请求，等待对方同意";
                         msg.className = "profile-add-msg success";
                         input.value = "";
-                        renderFriendsSidebar();
+                    } else if (result && result.status === "already_sent") {
+                        msg.textContent = "已发送过请求，请耐心等待";
+                        msg.className = "profile-add-msg error";
+                    } else if (result && result.status === "already_friends") {
+                        msg.textContent = "你们已经是好友了";
+                        msg.className = "profile-add-msg success";
+                        input.value = "";
                     } else {
-                        msg.textContent = result.error === "user_not_found" ? "未找到该用户" :
-                                         result.error === "cannot_add_self" ? "不能添加自己" : "添加失败";
+                        msg.textContent = result.error === "user_not_found" ? "未找到该用户" : "添加失败";
                         msg.className = "profile-add-msg error";
                     }
                 }).catch(function () {
@@ -1307,6 +1460,7 @@
         initProfileUI();
         initFriendsSidebar();
         initChatModal();
+        initPlayerPopup();
         renderScoreHistory();
         loadAssets();
 
