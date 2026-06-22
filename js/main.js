@@ -96,6 +96,24 @@
         deathSound.play().catch(function () {});
     };
 
+    // ========== 切屏自动暂停/恢复音频 ==========
+    var bgmWasPlaying = false;
+    document.addEventListener("visibilitychange", function () {
+        if (document.hidden) {
+            // 切走：暂停 BGM
+            bgmWasPlaying = !bgm.paused;
+            if (bgmWasPlaying) {
+                bgm.pause();
+            }
+        } else {
+            // 切回：如果之前正在播放且游戏未结束，恢复 BGM
+            if (bgmWasPlaying && (ZXF.phase === "playing" || ZXF.phase === "paused" || ZXF.phase === "countdown")) {
+                bgm.play().catch(function () {});
+            }
+            bgmWasPlaying = false;
+        }
+    });
+
     // ========== 最高分 ==========
     ZXF.bestScore = Number(localStorage.getItem("zhang-runner-best") || 0);
 
