@@ -881,68 +881,74 @@
             if (!data || !data.friends) return;
             ZXF.friends = data.friends;
 
-            var onlineCount = 0;
             if (data.friends.length === 0) {
                 container.innerHTML = "<p class=\"friends-empty\">暂无好友</p>";
                 if (countEl) countEl.textContent = "0";
                 return;
             }
 
-            var html = "";
-            for (var i = 0; i < data.friends.length; i++) {
-                var f = data.friends[i];
-                var isOnline = friendsOnlineMap[f.userId] === true;
-                if (isOnline) onlineCount++;
-                html += "<div class=\"sidebar-friend-row\" data-friend-id=\"" + f.userId + "\">" +
-                        "<span class=\"sidebar-online-dot " + (isOnline ? "online" : "offline") + "\"></span>" +
-                        "<span class=\"sidebar-friend-name\">" + escapeHtml(f.nickname) + "</span>" +
-                        "<span class=\"sidebar-friend-best\">" + String(f.bestScore || 0) + "</span>" +
-                        "<button class=\"sidebar-pk-btn\" data-friend-id=\"" + f.userId + "\" title=\"PK\">⚔</button>" +
-                        "<button class=\"sidebar-del-btn\" data-friend-id=\"" + f.userId + "\" title=\"删除\">✕</button>" +
-                        "</div>";
-            }
-            container.innerHTML = html;
+            // 先拉在线状态再渲染
+            var ids = data.friends.map(function (f) { return f.userId; });
+            ZXF.api.getOnlineStatus(ids).then(function (onlineData) {
+                if (onlineData && onlineData.online) {
+                    friendsOnlineMap = onlineData.online;
+                }
 
-            if (countEl) countEl.textContent = String(onlineCount);
+                var onlineCount = 0;
+                var html = "";
+                for (var i = 0; i < data.friends.length; i++) {
+                    var f = data.friends[i];
+                    var isOnline = friendsOnlineMap[f.userId] === true;
+                    if (isOnline) onlineCount++;
+                    html += "<div class=\"sidebar-friend-row\" data-friend-id=\"" + f.userId + "\">" +
+                            "<span class=\"sidebar-online-dot " + (isOnline ? "online" : "offline") + "\"></span>" +
+                            "<span class=\"sidebar-friend-name\">" + escapeHtml(f.nickname) + "</span>" +
+                            "<span class=\"sidebar-friend-best\">" + String(f.bestScore || 0) + "</span>" +
+                            "<button class=\"sidebar-pk-btn\" data-friend-id=\"" + f.userId + "\" title=\"" + (isOnline ? "发起PK" : "好友不在线") + "\"" + (isOnline ? "" : " disabled") + " style=\"opacity:" + (isOnline ? "1" : "0.4") + "\">⚔</button>" +
+                            "<button class=\"sidebar-del-btn\" data-friend-id=\"" + f.userId + "\" title=\"删除\">✕</button>" +
+                            "</div>";
+                }
+                container.innerHTML = html;
 
-            // 绑定 PK 按钮（仅在线时可点击）
-            var pkBtns = container.querySelectorAll(".sidebar-pk-btn");
-            for (var p = 0; p < pkBtns.length; p++) {
-                pkBtns[p].addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    var fid = this.getAttribute("data-friend-id");
-                    if (friendsOnlineMap[fid] !== true) {
-                        alert("好友不在线，无法发起PK");
-                        return;
-                    }
-                    if (ZXF.phase === "playing" || ZXF.pk.mode === "racing") return;
-                    startFriendPK(fid);
-                });
-            }
+                if (countEl) countEl.textContent = String(onlineCount);
 
-            // 绑定删除按钮
-            var delBtns = container.querySelectorAll(".sidebar-del-btn");
-            for (var d = 0; d < delBtns.length; d++) {
-                delBtns[d].addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    var fid = this.getAttribute("data-friend-id");
-                    if (!ZXF.api || !ZXF.userId) return;
-                    ZXF.api.removeFriend(ZXF.userId, fid).then(function () {
-                        renderFriendsSidebar();
-                    }).catch(function () {});
-                });
-            }
+                // 绑定 PK 按钮
+                var pkBtns = container.querySelectorAll(".sidebar-pk-btn");
+                for (var p = 0; p < pkBtns.length; p++) {
+                    pkBtns[p].addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        var fid = this.getAttribute("data-friend-id");
+                        if (friendsOnlineMap[fid] !== true) {
+                            alert("好友不在线，无法发起PK");
+                            return;
+                        }
+                        if (ZXF.phase === "playing" || ZXF.pk.mode === "racing") return;
+                        startFriendPK(fid);
+                    });
+                }
+
+                // 绑定删除按钮
+                var delBtns = container.querySelectorAll(".sidebar-del-btn");
+                for (var d = 0; d < delBtns.length; d++) {
+                    delBtns[d].addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        var fid = this.getAttribute("data-friend-id");
+                        if (!ZXF.api || !ZXF.userId) return;
+                        ZXF.api.removeFriend(ZXF.userId, fid).then(function () {
+                            renderFriendsSidebar();
+                        }).catch(function () {});
+                    });
+                }
+            }).catch(function () {});
         }).catch(function () {});
     }
 
     // ========== 在线状态轮询 ==========
     function startOnlinePolling() {
         if (onlinePollTimer) return;
-        // 立即发一次心跳
         doHeartbeat();
         heartbeatTimer = setInterval(doHeartbeat, 15000);
-        // 每 5 秒查询好友在线状态
-        onlinePollTimer = setInterval(fetchOnlineStatus, 5000);
+        onlinePollTimer = setInterval(refreshOnlineStatus, 5000);
     }
 
     function doHeartbeat() {
@@ -950,7 +956,7 @@
         ZXF.api.heartbeat(ZXF.userId).catch(function () {});
     }
 
-    function fetchOnlineStatus() {
+    function refreshOnlineStatus() {
         if (!ZXF.api || !ZXF.userId) return;
 
         var ids = ZXF.friends.map(function (f) { return f.userId; });
@@ -958,21 +964,22 @@
             ZXF.api.getOnlineStatus(ids).then(function (data) {
                 if (data && data.online) {
                     friendsOnlineMap = data.online;
-                    updateOnlineDots();
+                    updateOnlineDotsAndCount();
                 }
             }).catch(function () {});
         }
     }
 
-    function updateOnlineDots() {
+    function updateOnlineDotsAndCount() {
         var dots = document.querySelectorAll(".sidebar-online-dot");
+        var onlineCount = 0;
         for (var i = 0; i < dots.length; i++) {
             var row = dots[i].closest(".sidebar-friend-row");
             if (!row) continue;
             var fid = row.getAttribute("data-friend-id");
             var online = friendsOnlineMap[fid] === true;
+            if (online) onlineCount++;
             dots[i].className = "sidebar-online-dot " + (online ? "online" : "offline");
-            // 更新 PK 按钮状态
             var pkBtn = row.querySelector(".sidebar-pk-btn");
             if (pkBtn) {
                 pkBtn.disabled = !online;
@@ -980,6 +987,9 @@
                 pkBtn.title = online ? "发起PK" : "好友不在线";
             }
         }
+        // 更新在线人数
+        var countEl = document.getElementById("friendsOnlineCount");
+        if (countEl) countEl.textContent = String(onlineCount);
     }
 
     // ========== 个人中心 + 好友 ==========
@@ -1294,7 +1304,6 @@
                     }
                     // 加载好友列表和在线状态
                     renderFriendsSidebar();
-                    fetchOnlineStatus();
                     startOnlinePolling();
                 }
             }).catch(function () {});
