@@ -124,10 +124,10 @@ body::after {
     position: relative;
     z-index: 1;
     width: 100%;
-    max-width: 1024px;
+    max-width: 1060px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
 }
 
 .game-shell {
@@ -176,8 +176,8 @@ body::after {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 14px;
-    font-size: 15px;
+    padding: 6px 10px;
+    font-size: 14px;
     font-weight: 600;
     color: #e2e8f0;
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.9));
@@ -191,6 +191,7 @@ body::after {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .hud-title {
@@ -218,8 +219,7 @@ body::after {
     font-family: "JetBrains Mono", "Courier New", monospace;
     letter-spacing: 1px;
     flex: 1 1 auto;
-    justify-content: flex-end;
-    padding-right: 8px;
+    justify-content: center;
 }
 
 #score {
@@ -615,14 +615,19 @@ body::after {
     text-align: center;
 }
 
+/* ===== 画布容器 ===== */
+.canvas-stage {
+    position: relative;
+    width: 100%;
+    line-height: 0;
+}
+
 /* ===== 画布 ===== */
 #game {
     display: block;
     width: 100%;
     height: auto;
     touch-action: manipulation;
-    position: relative;
-    z-index: 1;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;

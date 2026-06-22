@@ -54,17 +54,19 @@
                     <button id="helpButton" class="help-button" type="button" aria-label="游戏说明">?</button>
                 </div>
             </div>
-            <canvas id="game" width="1024" height="576"></canvas>
+            <div class="canvas-stage">
+                <canvas id="game" width="1024" height="576"></canvas>
 
-            <!-- 倒计时层 -->
-            <div id="countdownOverlay" class="countdown-overlay hidden">
-                <span id="countdownText" class="countdown-text">3</span>
-            </div>
+                <!-- 倒计时层 -->
+                <div id="countdownOverlay" class="countdown-overlay hidden">
+                    <span id="countdownText" class="countdown-text">3</span>
+                </div>
 
-            <div id="overlay" class="overlay">
-                <h1>张雪峰快跑</h1>
-                <p id="overlayText">长按跳更高，按 ↓ 下蹲躲避雪碧<br>点击按钮或按空格开始游戏</p>
-                <button id="startButton" type="button">开始游戏</button>
+                <div id="overlay" class="overlay">
+                    <h1>张雪峰快跑</h1>
+                    <p id="overlayText">长按跳更高，按 ↓ 下蹲躲避雪碧<br>点击按钮或按空格开始游戏</p>
+                    <button id="startButton" type="button">开始游戏</button>
+                </div>
             </div>
 
             <!-- 设置面板 -->
