@@ -1114,6 +1114,7 @@ body::after {
         min-width: 0;
         gap: 4px;
         justify-content: flex-end;
+        flex-wrap: wrap;
     }
 
     .hud-title {
@@ -1135,8 +1136,12 @@ body::after {
     }
 
     .score-wrap {
-        gap: 6px;
-        font-size: 12px;
+        gap: 4px;
+        font-size: 11px;
+    }
+
+    #best {
+        font-size: 10px;
     }
 
     .pk-button {
@@ -1145,6 +1150,7 @@ body::after {
         padding: 0 6px;
         font-size: 10px;
         border-radius: 10px;
+        flex-shrink: 0;
     }
 
     .help-button,
@@ -1180,17 +1186,17 @@ body::after {
     }
 
     .score-wrap {
-        gap: 4px;
-        font-size: 11px;
+        gap: 3px;
+        font-size: 10px;
     }
 
     #best {
-        display: none;
+        font-size: 9px;
     }
 
     .pk-button {
         height: 24px;
-        padding: 0 5px;
+        padding: 0 4px;
         font-size: 9px;
     }
 
