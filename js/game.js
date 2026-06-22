@@ -394,6 +394,9 @@
                 if (pk.opponent.finished && !pk.selfFinished) {
                     // 继续跑，等自己死了再结算
                 }
+
+                // 拿到最新对手数据后立即检查是否双方都已结束
+                ZXF.pk.checkPKResult();
             }
         }).catch(function () {
             // 网络错误，忽略本次同步
