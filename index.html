@@ -13,11 +13,12 @@
         <div class="modifier-panel" id="modifierPanel">
             <div class="panel-header" id="modifierToggle">
                 <span class="panel-title">游戏修改器</span>
+                <span class="panel-hint">（使用修改器不计入纯净排行）</span>
                 <span class="toggle-arrow">▼</span>
             </div>
             <div class="panel-body" id="modifierBody">
                 <div class="modifier-row">
-                    <label class="modifier-label">速度倍率</label>
+                    <label class="modifier-label">速度</label>
                     <div class="modifier-options" data-key="speedMult">
                         <button class="mod-option" data-value="0.5">0.5x</button>
                         <button class="mod-option active" data-value="1">1x</button>
@@ -26,19 +27,12 @@
                     </div>
                 </div>
                 <div class="modifier-row">
-                    <label class="modifier-label">障碍密度</label>
+                    <label class="modifier-label">密度</label>
                     <div class="modifier-options" data-key="densityMult">
                         <button class="mod-option" data-value="0.5">稀疏</button>
                         <button class="mod-option active" data-value="1">正常</button>
                         <button class="mod-option" data-value="1.5">密集</button>
                     </div>
-                </div>
-                <div class="modifier-row">
-                    <label class="modifier-label">无敌模式</label>
-                    <label class="switch">
-                        <input type="checkbox" id="invincibleToggle">
-                        <span class="slider"></span>
-                    </label>
                 </div>
             </div>
         </div>
@@ -112,29 +106,54 @@
                 <div class="help-backdrop"></div>
                 <div class="help-card">
                     <div class="help-card-header">
-                        <span class="help-card-title">游戏玩法</span>
+                        <span class="help-card-title">🎮 游戏规则</span>
                         <button id="helpClose" class="help-close" type="button">&times;</button>
                     </div>
                     <div class="help-card-body">
                         <div class="help-section">
-                            <h3>操作方式</h3>
-                            <p>跳跃：<kbd>空格</kbd> / <kbd>↑</kbd> / 点击屏幕 / 点击"跳跃"按钮</p>
-                            <p>下蹲：<kbd>↓</kbd> / 点击"下蹲"按钮</p>
-                            <p>长按跳跃键可以跳得更高</p>
-                            <p>空中下蹲可快速落地</p>
+                            <h3>🎯 游戏目标</h3>
+                            <p>控制张雪峰在跑步机上不断奔跑，尽可能跑得更远。<br>前方会随机出现障碍物，碰到障碍物则游戏结束。</p>
                         </div>
                         <div class="help-section">
-                            <h3>障碍物说明</h3>
-                            <p>巧乐兹：必须跳跃躲避</p>
-                            <p>雪碧瓶：根据高度下蹲或跳跃躲避</p>
+                            <h3>⌨️ 操作方式</h3>
+                            <p><kbd>空格</kbd> / <kbd>↑</kbd> / 点击屏幕 / 点击"跳跃"按钮 → <strong>跳跃</strong></p>
+                            <p><kbd>↓</kbd> / 点击"下蹲"按钮 → <strong>下蹲</strong></p>
+                            <p>💡 <strong>长按跳跃键</strong>可以跳得更高，适合躲避高空的雪碧瓶</p>
+                            <p>💡 <strong>空中按下蹲</strong>可快速落地，反应更快</p>
                         </div>
                         <div class="help-section">
-                            <h3>游戏规则</h3>
-                            <p>随着奔跑距离增加，速度会越来越快</p>
-                            <p>碰到障碍物则游戏结束</p>
-                            <p>顶部修改器可调节速度和障碍密度</p>
-                            <p>无敌模式下不会死亡</p>
-                            <p>点击"PK对战"可与其他玩家实时竞速</p>
+                            <h3>🧱 障碍物说明</h3>
+                            <p>🍦 <strong>巧乐兹（地面）</strong>：只能跳跃躲避，下蹲无效</p>
+                            <p>🥤 <strong>雪碧瓶（空中）</strong>：分三种高度 — 低空需下蹲 / 中空需跳跃 / 高空需跳跃</p>
+                            <p>⚠️ 随着分数增加，障碍物出现越来越频繁，速度越来越快</p>
+                        </div>
+                        <div class="help-section">
+                            <h3>⚙️ 游戏修改器</h3>
+                            <p>顶部面板可调节 <strong>速度倍率</strong> 和 <strong>障碍密度</strong></p>
+                            <p>⚠️ 使用修改器后的成绩<strong>不会计入纯净排行榜</strong></p>
+                        </div>
+                        <div class="help-section">
+                            <h3>🏆 排行榜</h3>
+                            <p><strong>纯净榜</strong>：不使用修改器、非PK模式的原始成绩</p>
+                            <p><strong>全部榜</strong>：所有成绩（含修改器和PK）</p>
+                            <p>游戏结束后自动提交分数，可在右侧面板查看排行</p>
+                        </div>
+                        <div class="help-section">
+                            <h3>⚔️ PK 对战</h3>
+                            <p>点击 HUD 中的 <strong>PK对战</strong> 按钮随机匹配在线玩家</p>
+                            <p>通过 <strong>个人中心 → 好友列表</strong> 可与好友对战</p>
+                            <p>对手会以半透明幽灵形象出现在你的赛道上</p>
+                            <p>先撞到障碍物的一方为败方，存活更久者获胜</p>
+                        </div>
+                        <div class="help-section">
+                            <h3>👤 个人中心 &amp; 好友</h3>
+                            <p>点击昵称进入个人中心，可修改昵称、查看ID</p>
+                            <p>将你的 <strong>唯一ID</strong> 分享给朋友，即可互相添加好友</p>
+                            <p>好友之间可直接发起 PK，无需等待匹配</p>
+                        </div>
+                        <div class="help-warning">
+                            ⚠️ <strong>新手请注意：游戏开始前请仔细阅读以上规则！</strong><br>
+                            了解障碍物类型和操作技巧能帮助你跑得更远。
                         </div>
                     </div>
                 </div>

@@ -436,14 +436,6 @@
             });
             btn.classList.add("active");
         });
-
-        // 无敌模式开关
-        var invToggle = document.getElementById("invincibleToggle");
-        if (invToggle) {
-            invToggle.addEventListener("change", function () {
-                ZXF.modifiers.invincible = invToggle.checked;
-            });
-        }
     }
 
     // ========== 帮助弹窗 ==========
@@ -463,6 +455,7 @@
         }
         function closeModal() {
             modal.classList.add("hidden");
+            localStorage.setItem("zxf_rules_read", "1");
             if (wasPlaying && ZXF.phase === "paused") {
                 wasPlaying = false;
                 ZXF.startCountdown(function () {
@@ -998,6 +991,16 @@
 
             // 首次加载排行榜
             ZXF.fetchLeaderboard();
+
+            // 新玩家首次访问自动弹出规则说明
+            if (!localStorage.getItem("zxf_rules_read")) {
+                setTimeout(function () {
+                    var helpModal = document.getElementById("helpModal");
+                    if (helpModal) {
+                        helpModal.classList.remove("hidden");
+                    }
+                }, 800);
+            }
         }
     }
 
